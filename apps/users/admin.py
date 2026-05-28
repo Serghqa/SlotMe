@@ -9,9 +9,9 @@ class UserAdmin(BaseUserAdmin):
     list_filter = ('role', 'is_active', 'is_staff')
     search_fields = ('username', 'email', 'first_name', 'last_name', 'phone')
     list_editable = ('role', 'is_active')
-    fieldsets = BaseUserAdmin.fieldsets + (
+    fieldsets = list(BaseUserAdmin.fieldsets) + [
         ('Дополнительно', {'fields': ('role', 'phone')}),
-    )
+    ]
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
         ('Дополнительно', {'fields': ('role', 'phone')}),
     )
