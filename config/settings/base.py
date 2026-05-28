@@ -48,7 +48,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     # 'apps.core',
-    # 'apps.users',
+    'apps.users',
     # 'apps.masters',
     # 'apps.services',
     # 'apps.appointments',
@@ -104,7 +104,7 @@ DATABASES = {
 }
 
 # Пользователи
-# AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'users.User'
 # LOGIN_URL = 'login'
 # LOGIN_REDIRECT_URL = 'home'
 # LOGOUT_REDIRECT_URL = 'home'
