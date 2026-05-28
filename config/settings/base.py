@@ -50,7 +50,7 @@ LOCAL_APPS = [
     # 'apps.core',
     'apps.users',
     # 'apps.masters',
-    # 'apps.services',
+    'apps.services',
     # 'apps.appointments',
 ]
 
