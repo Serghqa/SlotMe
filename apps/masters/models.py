@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 class Master(models.Model):
@@ -26,10 +28,27 @@ class Master(models.Model):
     class Meta:
         verbose_name = 'Мастер'
         verbose_name_plural = 'Мастера'
-        ordering = ['user__last_name', 'user__first_name']
 
     def __str__(self):
-        return f"Мастер: {self.user.get_full_name() or self.user.username}"
+        return f"{self.user.get_full_name() or self.user.username}"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+
+        # Сначала сохраняем самого Мастера, чтобы получить pk (если он новый)
+        super().save(*args, **kwargs)
+
+        # Логика для создания и обновления
+        if self.is_active:
+            # Если активен — у пользователя железно должна быть роль 'master'
+            if self.user.role != 'master':
+                self.user.role = 'master'
+                self.user.save(update_fields=['role'])
+        else:
+            # Если деактивирован (и это не создание нового с is_active=False)
+            if not is_new and self.user.role == 'master':
+                self.user.role = 'client'
+                self.user.save(update_fields=['role'])
 
 
 class WorkSchedule(models.Model):
@@ -49,8 +68,8 @@ class WorkSchedule(models.Model):
         verbose_name='Мастер'
     )
     day_of_week = models.IntegerField(choices=DAY_CHOICES, verbose_name='День недели')
-    start_time = models.TimeField(verbose_name='Начало работы')
-    end_time = models.TimeField(verbose_name='Конец работы')
+    start_time = models.TimeField(verbose_name='Начало работы', blank=True, null=True)
+    end_time = models.TimeField(verbose_name='Конец работы', blank=True, null=True)
     is_working = models.BooleanField(default=True, verbose_name='Рабочий день')
 
     class Meta:
@@ -58,6 +77,26 @@ class WorkSchedule(models.Model):
         verbose_name_plural = 'Рабочее расписание'
         unique_together = ('master', 'day_of_week')
         ordering = ['master', 'day_of_week']
+
+    def clean(self):
+        super().clean()
+        # Если это РАБОЧИЙ день, проверяем, чтобы время было заполнено
+        if self.is_working:
+            errors = {}
+            if not self.start_time:
+                errors['start_time'] = 'Укажите время начала работы для рабочего дня.'
+            if not self.end_time:
+                errors['end_time'] = 'Укажите время окончания работы для рабочего дня.'
+            if errors:
+                raise ValidationError(errors)
+        else:
+            # Если это выходной день, очищаем время для чистоты данных
+            self.start_time = None
+            self.end_time = None
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.master} — {self.get_day_of_week_display()}: {self.start_time}–{self.end_time}"
@@ -78,13 +117,38 @@ class ScheduleException(models.Model):
     )
     start_time = models.TimeField(null=True, blank=True, verbose_name='Начало работы')
     end_time = models.TimeField(null=True, blank=True, verbose_name='Конец работы')
-    reason = models.CharField(max_length=200, blank=True, verbose_name='Причина')
+    reason = models.CharField(max_length=100, blank=True, verbose_name='Причина')
 
     class Meta:
         verbose_name = 'Исключение в расписании'
         verbose_name_plural = 'Исключения в расписании'
         unique_together = ('master', 'date')
-        ordering = ['master', 'date']
+
+    def clean(self):
+        super().clean()
+        current_date = timezone.localdate()
+        if self.date and self.date < current_date:
+            raise ValidationError({
+                'date': f'Нельзя устанавливать исключения на прошедшие даты (сегодня: {current_date}).'
+            })
+        # Если это рабочий день-исключение, проверяем заполненность полей времени
+        if self.is_working:
+            errors = {}
+            if not self.start_time:
+                errors['start_time'] = 'Укажите время начала работы для рабочего дня.'
+            if not self.end_time:
+                errors['end_time'] = 'Укажите время окончания работы для рабочего дня.'
+            if errors:
+                raise ValidationError(errors)
+        else:
+            # Если это выходной, зануляем время для чистоты данных
+            self.start_time = None
+            self.end_time = None
+
+    def save(self, *args, **kwargs):
+        # Вызываем clean() для валидации и очистки полей перед записью в БД
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         if self.is_working:
