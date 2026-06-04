@@ -1,10 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.admin import RelatedOnlyFieldListFilter
-from django.db.models import Q
 from .models import Master, WorkSchedule, ScheduleException
-from django.urls import reverse
-from django.utils.html import format_html
 
 
 User = get_user_model()
@@ -41,24 +38,16 @@ class MasterAdmin(admin.ModelAdmin):
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Показывает в выпадающем списке только пользователей без привязки к мастеру."""
         if db_field.name == "user":
-            # 1. Базовый запрос: ищем пользователей с ролью 'master' или 'client'
-            # (исключаем суперадминов/персонал, если это необходимо)
-            queryset = User.objects.filter(is_superuser=False)
-            # Получаем ID мастера, которого сейчас редактируют (если это редактирование)
-            object_id = request.resolver_match.kwargs.get('object_id')
-
-            if object_id:
-                # Если редактируем: исключаем ВСЕХ мастеров, КРОМЕ текущего
-                queryset = queryset.filter(
-                    Q(master_profile__isnull=True) | Q(master_profile__id=object_id)
-                )
-            else:
-                # Если создаем нового: показываем только пользователей БЕЗ профиля мастера
-                queryset = queryset.filter(master_profile__isnull=True)
-            # Оптимизируем загрузку (опционально)
-            kwargs["queryset"] = queryset.distinct()
+            kwargs["queryset"] = User.objects.filter(master_profile__isnull=True)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_readonly_fields(self, request, obj=None):
+        """Динамически делает поле 'user' доступным только для чтения при редактировании."""
+        if obj:  # Если объект уже существует в базе данных (редактирование)
+            return ('user',)
+        return ()  # При создании нового мастера скрываем только ссылку
+
 
     @admin.display(description='Мастер')
     def master_name(self, obj):
