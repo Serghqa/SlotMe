@@ -1,8 +1,13 @@
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.contrib.admin import RelatedOnlyFieldListFilter
+from django.db.models import Q
 from .models import Master, WorkSchedule, ScheduleException
 from django.urls import reverse
 from django.utils.html import format_html
+
+
+User = get_user_model()
 
 
 class WorkScheduleInline(admin.TabularInline):
@@ -33,6 +38,28 @@ class MasterAdmin(admin.ModelAdmin):
         # prefetch_related эффективно подтягивает многие-ко-многим (услуги)
         return queryset.select_related('user').prefetch_related('services')
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Показывает в выпадающем списке только пользователей без привязки к мастеру."""
+        if db_field.name == "user":
+            # 1. Базовый запрос: ищем пользователей с ролью 'master' или 'client'
+            # (исключаем суперадминов/персонал, если это необходимо)
+            queryset = User.objects.filter(is_superuser=False)
+            # Получаем ID мастера, которого сейчас редактируют (если это редактирование)
+            object_id = request.resolver_match.kwargs.get('object_id')
+
+            if object_id:
+                # Если редактируем: исключаем ВСЕХ мастеров, КРОМЕ текущего
+                queryset = queryset.filter(
+                    Q(master_profile__isnull=True) | Q(master_profile__id=object_id)
+                )
+            else:
+                # Если создаем нового: показываем только пользователей БЕЗ профиля мастера
+                queryset = queryset.filter(master_profile__isnull=True)
+            # Оптимизируем загрузку (опционально)
+            kwargs["queryset"] = queryset.distinct()
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     @admin.display(description='Мастер')
     def master_name(self, obj):
         return obj.user.username
@@ -43,7 +70,7 @@ class MasterAdmin(admin.ModelAdmin):
 
     @admin.display(description='Услуги')
     def services_list(self, obj):
-        services = list(obj.services.all())
+        services = obj.services.all()
         services_str = ', '.join(s.name for s in services[:3])
         if len(services_str) > 50:
             services_str = services_str[:47] + '...'
