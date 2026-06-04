@@ -18,8 +18,7 @@ class ScheduleExceptionInline(admin.TabularInline):
 
 @admin.register(Master)
 class MasterAdmin(admin.ModelAdmin):
-    fields = ('user', 'user_link', 'services', 'is_active')
-    readonly_fields = ('user_link',)
+    fields = ('user', 'services', 'is_active')
 
     list_display = ('master_name', 'phone', 'is_active', 'services_list')
     list_filter = ('is_active', ('services', RelatedOnlyFieldListFilter))
@@ -50,15 +49,6 @@ class MasterAdmin(admin.ModelAdmin):
             services_str = services_str[:47] + '...'
 
         return services_str or "-"
-
-    @admin.display(description='Профиль пользователя')
-    def user_link(self, obj):
-        if not obj.user_id:
-            return "-"
-        # Динамически определяем имя приложения для кастомной модели User
-        app_label = obj.user._meta.app_label
-        url = reverse(f'admin:{app_label}_user_change', args=[obj.user.id])
-        return format_html('<a href="{}">Перейти в профиль ({})</a>', url, obj.user.username)
 
 
 @admin.register(WorkSchedule)
