@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.admin import RelatedOnlyFieldListFilter
 from .models import Master, WorkSchedule, ScheduleException
+from .utils import FilterActiveMasterMixin
 
 
 User = get_user_model()
@@ -68,26 +69,14 @@ class MasterAdmin(admin.ModelAdmin):
 
 
 @admin.register(WorkSchedule)
-class WorkScheduleAdmin(admin.ModelAdmin):
+class WorkScheduleAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
     list_display = ('master', 'day_of_week', 'start_time', 'end_time', 'is_working')
     list_filter = ('master', 'day_of_week', 'is_working')
 
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """Показывает в выпадающем списке только АКТИВНЫХ мастеров."""
-        if db_field.name == "master":
-            kwargs["queryset"] = Master.objects.filter(is_active=True)
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
 
 @admin.register(ScheduleException)
-class ScheduleExceptionAdmin(admin.ModelAdmin):
+class ScheduleExceptionAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
     fields = ('master', 'date', 'is_working', 'start_time', 'end_time', 'reason')
     list_display = ('master', 'date', 'start_time', 'end_time', 'reason', 'is_working')
     list_filter = ('master', 'is_working', 'date')
     search_fields = ('reason',)
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """Показывает в выпадающем списке только АКТИВНЫХ мастеров."""
-        if db_field.name == "master":
-            kwargs["queryset"] = Master.objects.filter(is_active=True)
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
