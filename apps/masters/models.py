@@ -1,7 +1,8 @@
 from django.db import models
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.utils import timezone
+from .utils import WorkingHoursMixin
+from django.core.exceptions import ValidationError
 
 
 class Master(models.Model):
@@ -51,7 +52,7 @@ class Master(models.Model):
                 self.user.save(update_fields=['role'])
 
 
-class WorkSchedule(models.Model):
+class WorkSchedule(WorkingHoursMixin, models.Model):
     DAY_CHOICES = [
         (0, 'Понедельник'),
         (1, 'Вторник'),
@@ -67,9 +68,9 @@ class WorkSchedule(models.Model):
         related_name='schedule',
         verbose_name='Мастер'
     )
-    day_of_week = models.IntegerField(choices=DAY_CHOICES, verbose_name='День недели')
     start_time = models.TimeField(verbose_name='Начало работы', blank=True, null=True)
     end_time = models.TimeField(verbose_name='Конец работы', blank=True, null=True)
+    day_of_week = models.IntegerField(choices=DAY_CHOICES, verbose_name='День недели')
     is_working = models.BooleanField(default=True, verbose_name='Рабочий день')
 
     class Meta:
@@ -80,29 +81,13 @@ class WorkSchedule(models.Model):
 
     def clean(self):
         super().clean()
-        # Если это РАБОЧИЙ день, проверяем, чтобы время было заполнено
-        if self.is_working:
-            errors = {}
-            if not self.start_time:
-                errors['start_time'] = 'Укажите время начала работы для рабочего дня.'
-            if not self.end_time:
-                errors['end_time'] = 'Укажите время окончания работы для рабочего дня.'
-            if errors:
-                raise ValidationError(errors)
-        else:
-            # Если это выходной день, очищаем время для чистоты данных
-            self.start_time = None
-            self.end_time = None
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
+        self.clean_working_hours()
 
     def __str__(self):
         return f"{self.master} — {self.get_day_of_week_display()}: {self.start_time}–{self.end_time}"
 
 
-class ScheduleException(models.Model):
+class ScheduleException(WorkingHoursMixin, models.Model):
     master = models.ForeignKey(
         Master,
         on_delete=models.CASCADE,
@@ -110,13 +95,13 @@ class ScheduleException(models.Model):
         verbose_name='Мастер'
     )
     date = models.DateField(verbose_name='Дата')
+    start_time = models.TimeField(verbose_name='Начало работы', blank=True, null=True)
+    end_time = models.TimeField(verbose_name='Конец работы', blank=True, null=True)
     is_working = models.BooleanField(
         default=False,
         verbose_name='Рабочий день',
         help_text='Если выключено — выходной. Если включено — особые часы.'
     )
-    start_time = models.TimeField(null=True, blank=True, verbose_name='Начало работы')
-    end_time = models.TimeField(null=True, blank=True, verbose_name='Конец работы')
     reason = models.CharField(max_length=100, blank=True, verbose_name='Причина')
 
     class Meta:
@@ -131,24 +116,7 @@ class ScheduleException(models.Model):
             raise ValidationError({
                 'date': f'Нельзя устанавливать исключения на прошедшие даты (сегодня: {current_date}).'
             })
-        # Если это рабочий день-исключение, проверяем заполненность полей времени
-        if self.is_working:
-            errors = {}
-            if not self.start_time:
-                errors['start_time'] = 'Укажите время начала работы для рабочего дня.'
-            if not self.end_time:
-                errors['end_time'] = 'Укажите время окончания работы для рабочего дня.'
-            if errors:
-                raise ValidationError(errors)
-        else:
-            # Если это выходной, зануляем время для чистоты данных
-            self.start_time = None
-            self.end_time = None
-
-    def save(self, *args, **kwargs):
-        # Вызываем clean() для валидации и очистки полей перед записью в БД
-        self.clean()
-        super().save(*args, **kwargs)
+        self.clean_working_hours()
 
     def __str__(self):
         if self.is_working:
