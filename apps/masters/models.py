@@ -5,6 +5,13 @@ from .utils import WorkingHoursMixin
 from django.core.exceptions import ValidationError
 
 
+class MasterManager(models.Manager):
+    """Менеджер, который всегда подгружает пользователя"""
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('user')
+
+
 class Master(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -26,12 +33,14 @@ class Master(models.Model):
     )
     is_active = models.BooleanField(default=True, verbose_name='Активен')
 
+    objects = MasterManager()
+
     class Meta:
         verbose_name = 'Мастер'
         verbose_name_plural = 'Мастера'
 
     def __str__(self):
-        return f"{self.user.get_full_name() or self.user.username}"
+        return self.user.get_full_name() or self.user.username or f'Мастер #{self.pk}'
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
@@ -77,7 +86,6 @@ class WorkSchedule(WorkingHoursMixin, models.Model):
         verbose_name = 'Рабочее расписание'
         verbose_name_plural = 'Рабочее расписание'
         unique_together = ('master', 'day_of_week')
-        ordering = ['master', 'day_of_week']
 
     def clean(self):
         super().clean()

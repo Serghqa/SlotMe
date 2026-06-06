@@ -32,9 +32,8 @@ class MasterAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Оптимизация запросов к БД (решение проблемы N+1)."""
         queryset = super().get_queryset(request)
-        # select_related подгружает данные пользователя одним JOIN-запросом
         # prefetch_related эффективно подтягивает многие-ко-многим (услуги)
-        return queryset.select_related('user').prefetch_related('services')
+        return queryset.prefetch_related('services')
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Показывает в выпадающем списке только пользователей без привязки к мастеру."""
@@ -71,12 +70,14 @@ class MasterAdmin(admin.ModelAdmin):
 @admin.register(WorkSchedule)
 class WorkScheduleAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
     list_display = ('master', 'day_of_week', 'start_time', 'end_time', 'is_working')
-    list_filter = ('master', 'day_of_week', 'is_working')
+    list_filter = ('master__is_active', 'day_of_week', 'is_working')
+    list_select_related = ('master__user',)
+    search_fields = ('master__user__username', 'master__user__first_name', 'master__user__last_name')
 
 
 @admin.register(ScheduleException)
 class ScheduleExceptionAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
-    fields = ('master', 'date', 'is_working', 'start_time', 'end_time', 'reason')
-    list_display = ('master', 'date', 'start_time', 'end_time', 'reason', 'is_working')
-    list_filter = ('master', 'is_working', 'date')
-    search_fields = ('reason',)
+    list_display = ('master', 'date', 'is_working', 'start_time', 'end_time', 'reason')
+    list_filter = ('master__is_active', 'is_working', 'date')
+    list_select_related = ('master__user',)
+    search_fields = ('reason', 'master__user__username', 'master__user__first_name', 'master__user__last_name')
