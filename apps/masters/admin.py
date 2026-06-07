@@ -2,19 +2,19 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.admin import RelatedOnlyFieldListFilter
 from .models import Master, WorkSchedule, ScheduleException
-from .utils import FilterActiveMasterMixin
+from .utils import FilterActiveMasterMixin, ScheduleInlineMixin
 
 
 User = get_user_model()
 
 
-class WorkScheduleInline(admin.TabularInline):
+class WorkScheduleInline(ScheduleInlineMixin, admin.TabularInline):
     model = WorkSchedule
     extra = 0
     fields = ('day_of_week', 'start_time', 'end_time', 'is_working')
 
 
-class ScheduleExceptionInline(admin.TabularInline):
+class ScheduleExceptionInline(ScheduleInlineMixin, admin.TabularInline):
     model = ScheduleException
     extra = 0
 
