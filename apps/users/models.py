@@ -1,3 +1,4 @@
+from django.apps import apps
 from django.contrib.auth.models import AbstractUser
 from django.db import models, transaction
 
@@ -36,7 +37,7 @@ class User(AbstractUser):
             # Стандартное сохранение пользователя
             super().save(*args, **kwargs)
 
-            from apps.masters.models import Master  # Импортируем здесь, чтобы избежать циклической зависимости
+            Master = apps.get_model('masters', 'Master')
 
             # Логика 1: Новый пользователь с ролью master
             if is_new and self.role == 'master':
