@@ -1,5 +1,5 @@
 from django.contrib.auth.models import AbstractUser
-from django.db import models
+from django.db import models, transaction
 
 
 class User(AbstractUser):
@@ -32,28 +32,29 @@ class User(AbstractUser):
             # Получаем старую роль из базы данных для сравнения
             old_role = User.objects.filter(pk=self.pk).values_list('role', flat=True).first()
 
-        # Стандартное сохранение пользователя
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            # Стандартное сохранение пользователя
+            super().save(*args, **kwargs)
 
-        from apps.masters.models import Master  # Импортируем здесь, чтобы избежать циклической зависимости
+            from apps.masters.models import Master  # Импортируем здесь, чтобы избежать циклической зависимости
 
-        # Логика 1: Новый пользователь с ролью master
-        if is_new and self.role == 'master':
-            Master.objects.get_or_create(user=self, defaults={'is_active': True})
+            # Логика 1: Новый пользователь с ролью master
+            if is_new and self.role == 'master':
+                Master.objects.get_or_create(user=self, defaults={'is_active': True})
 
-        # Логика 2: Изменение роли у существующего пользователя
-        elif not is_new and old_role != self.role:
-            if self.role == 'master':
-                # Меняем на master: активируем или создаем профиль
-                master_profile, created = Master.objects.get_or_create(user=self, defaults={'is_active': True})
-                if not created and not master_profile.is_active:
-                    master_profile.is_active = True
-                    # Используем update_fields, чтобы не триггерить save() Мастера и избежать рекурсии
-                    master_profile.save(update_fields=['is_active'])
+            # Логика 2: Изменение роли у существующего пользователя
+            elif not is_new and old_role != self.role:
+                if self.role == 'master':
+                    # Меняем на master: активируем или создаем профиль
+                    master_profile, created = Master.objects.get_or_create(user=self, defaults={'is_active': True})
+                    if not created and not master_profile.is_active:
+                        master_profile.is_active = True
+                        # Используем update_fields, чтобы не триггерить save() Мастера и избежать рекурсии
+                        master_profile.save(update_fields=['is_active'])
 
-            elif old_role == 'master' and self.role != 'master':
-                # Ушли с роли master: деактивируем профиль, если он есть
-                master_profile = Master.objects.filter(user=self).first()
-                if master_profile and master_profile.is_active:
-                    master_profile.is_active = False
-                    master_profile.save(update_fields=['is_active'])
+                elif old_role == 'master' and self.role != 'master':
+                    # Ушли с роли master: деактивируем профиль, если он есть
+                    master_profile = Master.objects.filter(user=self).first()
+                    if master_profile and master_profile.is_active:
+                        master_profile.is_active = False
+                        master_profile.save(update_fields=['is_active'])
