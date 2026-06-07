@@ -15,6 +15,7 @@ class User(AbstractUser):
         default='client',
         verbose_name='Роль'
     )
+    email = models.EmailField(unique=True, verbose_name='Электронная почта')
     phone = models.CharField(max_length=20, blank=True, verbose_name='Телефон')
 
     class Meta:
@@ -34,6 +35,8 @@ class User(AbstractUser):
             old_role = User.objects.filter(pk=self.pk).values_list('role', flat=True).first()
 
         with transaction.atomic():
+            if self.email:
+                self.email = self.email.lower()  # Нормализуем email
             # Стандартное сохранение пользователя
             super().save(*args, **kwargs)
 
