@@ -7,6 +7,7 @@ from .models import User
 class UserAdmin(BaseUserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'role', 'phone',)
     list_filter = ('role',)
+    list_per_page = 15
     search_fields = ('username', 'email', 'first_name', 'last_name', 'phone',)
     list_editable = ('role',)
     fieldsets = list(BaseUserAdmin.fieldsets) + [

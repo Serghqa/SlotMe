@@ -22,9 +22,9 @@ class ScheduleExceptionInline(ScheduleInlineMixin, admin.TabularInline):
 @admin.register(Master)
 class MasterAdmin(admin.ModelAdmin):
     fields = ('user', 'services', 'is_active')
-
+    list_per_page = 15
     list_display = ('master_name', 'phone', 'is_active', 'services_list')
-    list_filter = ('is_active', ('services', RelatedOnlyFieldListFilter))
+    list_filter = ('is_active',)
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__phone')
     filter_horizontal = ('services',)
     inlines = [WorkScheduleInline, ScheduleExceptionInline]
@@ -43,10 +43,10 @@ class MasterAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def get_readonly_fields(self, request, obj=None):
-        """Динамически делает поле 'user' доступным только для чтения при редактировании."""
-        if obj:  # Если объект уже существует в базе данных (редактирование)
+        """Если объект редактируется, делаем поле 'user' доступным только для чтения."""
+        if obj:
             return ('user',)
-        return ()  # При создании нового мастера скрываем только ссылку
+        return ()
 
 
     @admin.display(description='Мастер')
