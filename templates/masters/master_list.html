@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Мастера — SlotMe{% endblock title %}
+
+{% block content %}
+<h2 class="mb-4">Наши мастера</h2>
+
+{% if masters %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for master in masters %}
+            <div class="col">
+                <div class="card h-100">
+                    {% if master.photo %}
+                        <img src="{{ master.photo.url }}" class="card-img-top" alt="{{ master.user.get_full_name }}">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ master.user.get_full_name|default:master.user.username }}</h5>
+                        {% if master.bio %}
+                            <p class="card-text text-muted">{{ master.bio|truncatechars:100 }}</p>
+                        {% endif %}
+                        <p class="card-text">
+                            <small class="text-muted">
+                                Услуги:
+                                {% for service in master.services.all %}
+                                    {{ service.name }}{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                    не указаны
+                                {% endfor %}
+                            </small>
+                        </p>
+                        <a href="#" class="btn btn-primary">Записаться</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">Мастеров пока нет.</div>
+{% endif %}
+{% endblock content %}

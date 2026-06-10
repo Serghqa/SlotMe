@@ -10,7 +10,7 @@
             Онлайн-запись к мастеру за пару кликов. Выберите услугу, мастера и удобное время.
         </p>
         <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-            <a href="#" class="btn btn-primary btn-lg px-4 gap-3">Смотреть мастеров</a>
+            <a href="{% url 'masters:master_list' %}" class="btn btn-primary btn-lg px-4 gap-3">Смотреть мастеров</a>
             <a href="{% url 'services:services_list' %}" class="btn btn-outline-secondary btn-lg px-4">Смотреть услуги</a>
         </div>
     </div>

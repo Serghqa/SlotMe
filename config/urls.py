@@ -24,6 +24,7 @@ urlpatterns = [
     path('', home_view, name='home'),
     path('', include('apps.users.urls')),
     path('services/', include('apps.services.urls')),
+    path('masters/', include('apps.masters.urls')),
 ]
 
 if settings.DEBUG:
