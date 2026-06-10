@@ -28,7 +28,7 @@
                                 {% endfor %}
                             </small>
                         </p>
-                        <a href="#" class="btn btn-primary">Записаться</a>
+                        <a href="{% url 'masters:master_detail' master.id %}" class="btn btn-primary">Записаться</a>
                     </div>
                 </div>
             </div>
