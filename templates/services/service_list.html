@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Услуги — SlotMe{% endblock title %}
+
+{% block content %}
+<h2 class="mb-4">Наши услуги</h2>
+
+{% if services %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for service in services %}
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ service.name }}</h5>
+                        {% if service.description %}
+                            <p class="card-text text-muted">{{ service.description }}</p>
+                        {% endif %}
+                        <p class="card-text">
+                            <strong>{{ service.price }}₽</strong><br>
+                            <small class="text-muted">Длительность: {{ service.duration }}</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">Услуг пока нет.</div>
+{% endif %}
+{% endblock content %}

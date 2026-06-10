@@ -23,6 +23,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'home' %}">Главная</a>
                     </li>
+                    <li>
+                        <a class="nav-link" href="{% url 'services:services_list' %}">Услуги</a>
+                    </li>
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
