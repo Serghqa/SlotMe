@@ -71,6 +71,7 @@ class MasterAdmin(admin.ModelAdmin):
 class WorkScheduleAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
     list_display = ('master', 'day_of_week', 'start_time', 'end_time', 'is_working')
     list_filter = ('master__is_active', 'day_of_week', 'is_working')
+    list_per_page = 15
     list_select_related = ('master__user',)
     search_fields = ('master__user__username', 'master__user__first_name', 'master__user__last_name')
 
@@ -79,5 +80,6 @@ class WorkScheduleAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
 class ScheduleExceptionAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
     list_display = ('master', 'date', 'is_working', 'start_time', 'end_time', 'reason')
     list_filter = ('master__is_active', 'is_working', 'date')
+    list_per_page = 15
     list_select_related = ('master__user',)
     search_fields = ('reason', 'master__user__username', 'master__user__first_name', 'master__user__last_name')
