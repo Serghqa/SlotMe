@@ -57,3 +57,4 @@ ENV/
 ../.vscode/
 /media
 pgdata/
+redis_data

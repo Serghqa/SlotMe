@@ -52,7 +52,7 @@ LOCAL_APPS = [
     'apps.users',
     'apps.masters',
     'apps.services',
-    # 'apps.appointments',
+    'apps.appointments',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -161,12 +161,12 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Redis / Кэш
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-#         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
-#     }
-# }
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': config('REDIS_URL', default=config('REDIS_URL')),
+    }
+}
 
 # Celery
 # CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://127.0.0.1:6379/0')
