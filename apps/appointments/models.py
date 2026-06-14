@@ -50,7 +50,8 @@ class Appointment(models.Model):
             models.UniqueConstraint(
                 fields=['master', 'start_datetime'],
                 condition=~models.Q(status='cancelled'),
-                name='unique_active_booking'
+                name='unique_active_booking',
+                violation_error_message='Мастер уже занят в это время'
             )
         ]
         indexes = [
