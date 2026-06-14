@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from datetime import timedelta
 
 
 class Service(models.Model):
@@ -21,6 +22,13 @@ class Service(models.Model):
         verbose_name = 'Услуга'
         verbose_name_plural = 'Услуги'
         ordering = ['name']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(duration__gt=timedelta(0)),
+                name='duration_positive',
+                violation_error_message='Длительность должна быть положительной'
+            )
+        ]
 
     def __str__(self):
         return f"{self.name} — {self.price}₽ ({self.duration})"
