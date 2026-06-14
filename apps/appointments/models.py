@@ -14,20 +14,19 @@ class Appointment(models.Model):
 
     client = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='appointments',
         verbose_name='Клиент'
     )
     master = models.ForeignKey(
         'masters.Master',
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='appointments',
         verbose_name='Мастер'
     )
     service = models.ForeignKey(
         'services.Service',
-        on_delete=models.SET_NULL,
-        null=True,
+        on_delete=models.PROTECT,
         related_name='appointments',
         verbose_name='Услуга'
     )
@@ -54,12 +53,17 @@ class Appointment(models.Model):
                 name='unique_active_booking'
             )
         ]
+        indexes = [
+            models.Index(fields=['master', 'start_datetime']),
+            models.Index(fields=['client', 'start_datetime']),
+            models.Index(fields=['status']),
+        ]
 
     def __str__(self):
-        return f"{self.client} → {self.master} — {self.start_datetime:%d.%m.%Y %H:%M}"
+        return f"Запись: ({self.start_datetime:%d.%m.%Y %H:%M}-{self.end_datetime:%H:%M})"
 
     def save(self, *args, **kwargs):
-        if self.service and not self.end_datetime:
+        if self.service:
             self.end_datetime = self.start_datetime + self.service.duration
         super().save(*args, **kwargs)
 
