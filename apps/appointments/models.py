@@ -31,7 +31,7 @@ class Appointment(models.Model):
         verbose_name='Услуга'
     )
     start_datetime = models.DateTimeField(verbose_name='Начало')
-    end_datetime = models.DateTimeField(verbose_name='Конец', editable=False)
+    end_datetime = models.DateTimeField(verbose_name='Конец')
     status = models.CharField(
         max_length=15,
         choices=STATUS_CHOICES,

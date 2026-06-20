@@ -119,11 +119,6 @@ class ScheduleException(WorkingHoursMixin, models.Model):
 
     def clean(self):
         super().clean()
-        current_date = timezone.localdate()
-        if self.date and self.date < current_date:
-            raise ValidationError({
-                'date': f'Нельзя устанавливать исключения на прошедшие даты (сегодня: {current_date}).'
-            })
         self.clean_working_hours()
 
     def __str__(self):
