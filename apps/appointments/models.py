@@ -1,10 +1,10 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from datetime import timedelta
+from .utils import AppointmentValidationMixin
 
 
-class Appointment(models.Model):
+class Appointment(AppointmentValidationMixin, models.Model):
     STATUS_CHOICES = [
         ('booked', 'Забронирована'),
         ('completed', 'Завершена'),
@@ -31,7 +31,7 @@ class Appointment(models.Model):
         verbose_name='Услуга'
     )
     start_datetime = models.DateTimeField(verbose_name='Начало')
-    end_datetime = models.DateTimeField(verbose_name='Конец')
+    end_datetime = models.DateTimeField(null=True, blank=True, verbose_name='Конец')
     status = models.CharField(
         max_length=15,
         choices=STATUS_CHOICES,
@@ -63,9 +63,14 @@ class Appointment(models.Model):
     def __str__(self):
         return f"Запись: ({self.start_datetime:%d.%m.%Y %H:%M}-{self.end_datetime:%H:%M})"
 
+    def clean(self):
+        self.clean_appointment()
+
     def save(self, *args, **kwargs):
-        if self.service:
+        if self.service and self.start_datetime:
             self.end_datetime = self.start_datetime + self.service.duration
+        if self.status == 'cancelled' and not self.cancelled_at:
+            self.cancelled_at = timezone.now()
         super().save(*args, **kwargs)
 
     @property

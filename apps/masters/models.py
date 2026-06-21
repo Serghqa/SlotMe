@@ -1,8 +1,6 @@
 from django.db import models, transaction
 from django.conf import settings
-from django.utils import timezone
 from .utils import WorkingHoursMixin
-from django.core.exceptions import ValidationError
 
 
 class MasterManager(models.Manager):

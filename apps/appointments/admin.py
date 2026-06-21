@@ -1,7 +1,5 @@
 from django.contrib import admin
-from django.core.exceptions import ValidationError
 from .models import Appointment
-
 
 @admin.register(Appointment)
 class AppointmentAdmin(admin.ModelAdmin):
@@ -15,3 +13,8 @@ class AppointmentAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.select_related('client', 'master__user', 'service')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # редактирование
+            return ('client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'cancelled_at')
+        return ('end_datetime', 'created_at', 'cancelled_at')
