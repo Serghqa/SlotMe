@@ -1,9 +1,10 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from datetime import timedelta
+from .utils import ServiceValidationMixin
 
 
-class Service(models.Model):
+class Service(ServiceValidationMixin, models.Model):
     name = models.CharField(max_length=100, verbose_name='Название')
     description = models.TextField(blank=True, verbose_name='Описание')
     price = models.DecimalField(
@@ -32,3 +33,6 @@ class Service(models.Model):
 
     def __str__(self):
         return f"{self.name} — {self.price}₽ ({self.duration})"
+
+    def clean(self):
+        self.clean_service()

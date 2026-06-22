@@ -1,17 +1,11 @@
+from django.core.exceptions import ValidationError
 from datetime import timedelta
 
 
 class ServiceValidationMixin:
     """Миксин для валидации Service."""
 
-    def clean(self):
-        cleaned_data = super().clean()
-        duration = cleaned_data.get('duration')
-
-        if duration is not None and duration <= timedelta(0):
-            self.add_error(
-                'duration',
-                'Длительность должна быть больше нуля.'
-            )
-
-        return cleaned_data
+    def clean_service(self):
+        if self.duration is not None:
+            if self.duration <= timedelta(0):
+                raise ValidationError({'duration': 'Длительность должна быть больше нуля.'})
