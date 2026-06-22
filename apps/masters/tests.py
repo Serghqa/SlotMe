@@ -39,7 +39,7 @@ class MasterBusinessLogicTestCase(TestCase):
         self.assertEqual(Service.objects.count(), 15)
 
     def test_working_hours_mixin_validation(self):
-        """Тестируем ваш WorkingHoursMixin (начало работы позже конца)."""
+        """Тестируем WorkingHoursMixin (начало работы позже конца)."""
         invalid_schedule = WorkSchedule(
             master=self.masters[0],  # Передаем конкретный инстанс Мастера, а не список
             day_of_week=0,
@@ -51,7 +51,7 @@ class MasterBusinessLogicTestCase(TestCase):
             invalid_schedule.full_clean()
 
     def test_past_date_exception_denied(self):
-        """Тестируем вашу кастомную валидацию даты в ScheduleException.clean()."""
+        """Тестируем кастомную валидацию даты в ScheduleException.clean()."""
         yesterday = timezone.localdate() - timedelta(days=1)
         past_exception = ScheduleException(
             master=self.masters[0],
