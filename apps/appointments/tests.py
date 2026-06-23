@@ -1,15 +1,16 @@
-from datetime import time, timedelta, datetime, date
+from datetime import time, timedelta, datetime
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db import IntegrityError, transaction
+from zoneinfo import ZoneInfo
+from .models import Appointment
 
 User = get_user_model()
 Master = apps.get_model('masters', 'Master')
 Service = apps.get_model('services', 'Service')
-Appointment = apps.get_model('appointments', 'Appointment')
 WorkSchedule = apps.get_model('masters', 'WorkSchedule')
 ScheduleException = apps.get_model('masters', 'ScheduleException')
 
@@ -23,16 +24,14 @@ class AppointmentBookingTestCase(TestCase):
         self.client_user = User.objects.create(
             username='test_client',
             email='client@example.com',
-            role='client',
             phone='+79990000001'
         )
         self.master_user = User.objects.create(
             username='test_master',
             email='master@example.com',
-            role='master',
             phone='+79990000002'
         )
-        self.master = Master.objects.get(user=self.master_user)
+        self.master = Master.objects.create(user=self.master_user)
 
         # Услуги
         self.service = Service.objects.create(
@@ -154,13 +153,12 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_master_without_schedule_denied(self):
         """Запись к мастеру без расписания запрещена"""
-        master_no_schedule_user = User.objects.create(
-            username='master_nosched',
+        user_master = User.objects.create(
+            username='user_master_no_schedule',
             email='nosched@example.com',
-            role='master',
             phone='+79990000006'
         )
-        master_no_schedule = Master.objects.get(user=master_no_schedule_user)
+        master_no_schedule = Master.objects.create(user=user_master)
         master_no_schedule.services.add(self.service)
 
         appointment = Appointment(
@@ -495,13 +493,12 @@ class AppointmentBookingTestCase(TestCase):
     def test_different_masters_same_time_allowed(self):
         """Разные мастера могут иметь записи на одно время"""
         # Второй мастер
-        master2_user = User.objects.create(
+        user_master_2 = User.objects.create(
             username='master2',
             email='master2@example.com',
-            role='master',
             phone='+79990000003'
         )
-        master2 = Master.objects.get(user=master2_user)
+        master2 = Master.objects.create(user=user_master_2)
         master2.services.add(self.service)
         WorkSchedule.objects.create(
             master=master2,
@@ -826,3 +823,65 @@ class AppointmentBookingTestCase(TestCase):
             status='booked'
         )
         self.assertNotEqual(appointment.end_datetime, custom_end)
+
+    def test_cancelled_at_in_utc(self):
+        """Проверяем, что cancelled_at сохраняется в UTC."""
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=timezone.now(),
+            status='cancelled'
+        )
+
+        # Сохраняется с UTC временем
+        self.assertEqual(appointment.cancelled_at.tzinfo, timezone.UTC)
+
+    def test_cancelled_at_display_in_local_time(self):
+        """Проверяем отображение в локальном времени."""
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=timezone.now(),
+            status='cancelled'
+        )
+
+        # Конвертируем в Europe/Moscow
+        moscow_tz = ZoneInfo('Europe/Moscow')
+        local_time = appointment.cancelled_at.astimezone(moscow_tz)
+
+        # Проверяем, что часовой пояс изменился
+        self.assertEqual(local_time.tzinfo, moscow_tz)
+
+    def test_cancelled_at_not_set_on_creation(self):
+        """При создании записи cancelled_at должен быть None."""
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=timezone.now(),
+            status='booked'
+        )
+        self.assertIsNone(appointment.cancelled_at)
+
+    def test_cancelled_at_set_only_once(self):
+        """Проверяем, что cancelled_at не перезаписывается."""
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=timezone.now(),
+            status='cancelled'
+        )
+        first_cancelled = appointment.cancelled_at
+
+        # Ждем немного
+        import time
+        time.sleep(0.5)
+
+        # Сохраняем еще раз
+        appointment.save()
+
+        # cancelled_at не изменился
+        self.assertEqual(appointment.cancelled_at, first_cancelled)

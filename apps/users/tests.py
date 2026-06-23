@@ -9,62 +9,43 @@ class UserWorkflowTestCase(TestCase):
 
     def setUp(self):
         """Выполняется ПЕРЕД КАЖДЫМ тестом в этом классе."""
-        # Шаг 1: Создаем 100 клиентов разом через bulk_create (метод save() НЕ вызывается)
+        # Шаг 1: Создаем 100 клиентов разом через bulk_create
         clients_pool = [
             User(
-                username=f'bulk_client_{i}',
-                email=f'client_{i}@example.com',
-                role='client',
+                username=f'User_{i}',
+                email=f'email_{i}@example.com',
                 phone=f'+7999000{i:04d}'
             )
             for i in range(1, 101)
         ]
         User.objects.bulk_create(clients_pool)
 
-        # Шаг 2: Создаем 10 мастеров по одному (метод save() ВЫЗЫВАЕТСЯ)
-        for i in range(1, 11):
-            User.objects.create(
-                username=f'individual_master_{i}',
-                email=f'master_{i}@example.com',
-                role='master',
-                phone=f'+7999111{i:04d}'
+        # Шаг 2: Создаем 10 мастеров по одному
+        self.users = User.objects.all()[:10]
+        self.masters = [
+            Master.objects.create(
+                user=self.users[i],
+                bio=f'I am {self.users[i].username}'
             )
+            for i in range(10)
+        ]
 
     def test_initial_creation_state(self):
         """Проверяем базовое корректное создание из setUp."""
         # Проверяем, что 100 клиентов создались разом
-        self.assertEqual(User.objects.filter(role='client').count(), 100)
+        self.assertEqual(User.objects.all().count(), 100)
 
         # Проверяем, что 10 мастеров создались и у них отработал метод save()
-        self.assertEqual(User.objects.filter(role='master').count(), 10)
+        self.assertEqual(Master.objects.all().count(), 10)
         self.assertEqual(Master.objects.filter(is_active=True).count(), 10)
-
-    def test_upgrade_clients_to_masters(self):
-        """Проверяем кастомную бизнес-логику метода save() при апгрейде клиента."""
-        clients_to_upgrade = User.objects.filter(role='client')[:10]
-
-        for client in list(clients_to_upgrade):
-            client.role = 'master'
-            client.save()  # Должен сработать метод save() и создаться профиль Master
-
-        self.assertEqual(User.objects.filter(role='client').count(), 90)
-        self.assertEqual(User.objects.filter(role='master').count(), 20)
-        self.assertEqual(Master.objects.filter(is_active=True).count(), 20)
 
     def test_deactivate_upgraded_masters(self):
-        """Проверяем кастомную бизнес-логику деактивации профилей мастеров."""
-        clients_to_modify = list(User.objects.filter(role='client')[:10])
-        for user in clients_to_modify:
-            user.role = 'master'
-            user.save()
+        """Проверяем деактивацию профилей мастеров."""
+        # Проверяем деактивацию 5 мастеров
+        for master in self.masters[:5]:
+            master.is_active = False
+            master.save()
 
-        # Меняем роль этим же 10 пользователям обратно на 'client'
-        for user in clients_to_modify:
-            user.refresh_from_db()
-            user.role = 'client'
-            user.save()
-
-        self.assertEqual(User.objects.filter(role='client').count(), 100)
-        self.assertEqual(User.objects.filter(role='master').count(), 10)
-        self.assertEqual(Master.objects.filter(is_active=True).count(), 10)
-        self.assertEqual(Master.objects.filter(is_active=False).count(), 10)
+        self.assertEqual(User.objects.all().count(), 100)
+        self.assertEqual(Master.objects.filter(is_active=True).count(), 5)
+        self.assertEqual(Master.objects.filter(is_active=False).count(), 5)

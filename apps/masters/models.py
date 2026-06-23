@@ -1,5 +1,6 @@
-from django.db import models, transaction
+from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from .utils import WorkingHoursMixin
 
 
@@ -39,24 +40,6 @@ class Master(models.Model):
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username or f'Мастер #{self.pk}'
-
-    def save(self, *args, **kwargs):
-        is_new = self.pk is None
-        with transaction.atomic():
-            # Сначала сохраняем самого Мастера, чтобы получить pk (если он новый)
-            super().save(*args, **kwargs)
-
-            # Логика для создания и обновления
-            if self.is_active:
-                # Если активен — у пользователя железно должна быть роль 'master'
-                if self.user.role != 'master':
-                    self.user.role = 'master'
-                    self.user.save(update_fields=['role'])
-            else:
-                # Если деактивирован (и это не создание нового с is_active=False)
-                if not is_new and self.user.role == 'master':
-                    self.user.role = 'client'
-                    self.user.save(update_fields=['role'])
 
 
 class WorkSchedule(WorkingHoursMixin, models.Model):

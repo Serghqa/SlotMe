@@ -11,14 +11,13 @@
             <div class="card-body">
                 <h5 class="card-title">{{ user.get_full_name|default:user.username }}</h5>
                 <p class="card-text">
-                    <strong>Роль:</strong> {{ user.get_role_display }}<br>
                     <strong>Email:</strong> {{ user.email|default:"Не указан" }}<br>
                     <strong>Телефон:</strong> {{ user.phone|default:"Не указан" }}
                 </p>
             </div>
         </div>
 
-        {% if user.role == 'client' %}
+        {% if user.is_master %}
             <div class="mt-3">
                 <a href="#" class="btn btn-outline-primary">Мои записи</a>
             </div>

@@ -21,13 +21,14 @@ class ScheduleExceptionInline(ScheduleInlineMixin, admin.TabularInline):
 
 @admin.register(Master)
 class MasterAdmin(admin.ModelAdmin):
-    fields = ('user', 'services', 'is_active')
+    fields = ('user', 'is_active', 'services', 'bio', 'photo')
     list_per_page = 15
-    list_display = ('master_name', 'phone', 'is_active', 'services_list')
+    list_display = ('master_name', 'phone', 'is_active')
     list_filter = ('is_active',)
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__phone')
     filter_horizontal = ('services',)
     inlines = [WorkScheduleInline, ScheduleExceptionInline]
+
 
     def get_queryset(self, request):
         """Оптимизация запросов к БД (решение проблемы N+1)."""
@@ -48,12 +49,11 @@ class MasterAdmin(admin.ModelAdmin):
             return ('user',)
         return ()
 
-
-    @admin.display(description='Мастер')
+    @admin.display(description='Мастер', ordering='user__username')
     def master_name(self, obj):
-        return obj.user.username
+        return obj.user.get_full_name() or obj.user.username
 
-    @admin.display(description='Телефон')
+    @admin.display(description='Телефон', ordering='user__username')
     def phone(self, obj):
         return obj.user.phone
 
