@@ -21,11 +21,12 @@ class UserWorkflowTestCase(TestCase):
         User.objects.bulk_create(clients_pool)
 
         # Шаг 2: Создаем 10 мастеров по одному
-        self.users = User.objects.all()[:10]
+        self.users = User.objects.all()
+        self.master_users = self.users[:10]
         self.masters = [
             Master.objects.create(
-                user=self.users[i],
-                bio=f'I am {self.users[i].username}'
+                user=self.master_users[i],
+                bio=f'I am {self.master_users[i].username}'
             )
             for i in range(10)
         ]
@@ -49,3 +50,8 @@ class UserWorkflowTestCase(TestCase):
         self.assertEqual(User.objects.all().count(), 100)
         self.assertEqual(Master.objects.filter(is_active=True).count(), 5)
         self.assertEqual(Master.objects.filter(is_active=False).count(), 5)
+
+    def test_is_master_property(self):
+        """Проверяем свойство модели определения связной модели мастера"""
+        self.assertEqual(self.master_users[0].is_master, True)
+        self.assertEqual(self.users[15].is_master, False)

@@ -61,7 +61,9 @@ class Appointment(AppointmentValidationMixin, models.Model):
         ]
 
     def __str__(self):
-        return f"Запись: ({self.start_datetime:%d.%m.%Y %H:%M}-{self.end_datetime:%H:%M})"
+        local_start = timezone.localtime(self.start_datetime)
+        local_end = timezone.localtime(self.end_datetime)
+        return f"Запись: ({local_start:%d.%m.%Y %H:%M}-{local_end:%H:%M})"
 
     def clean(self):
         self.clean_appointment()

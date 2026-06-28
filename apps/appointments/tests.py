@@ -885,3 +885,162 @@ class AppointmentBookingTestCase(TestCase):
 
         # cancelled_at не изменился
         self.assertEqual(appointment.cancelled_at, first_cancelled)
+
+    # ==================== ТЕСТЫ ГЕНЕРАЦИИ И ФИЛЬТРАЦИИ СЛОТОВ ====================
+
+    def test_get_available_slots_returns_correct_intervals(self):
+        """Проверка базовой генерации слотов в рабочий день по расписанию мастера"""
+        from apps.appointments.services import get_available_slots
+
+        # Запрашиваем слоты на рабочий понедельник
+        slots = get_available_slots(self.master, self.monday, self.service)
+
+        # Проверяем, что слоты сгенерировались
+        self.assertTrue(len(slots) > 0)
+        # Первый слот должен совпадать со временем начала работы (09:00)
+        self.assertEqual(slots[0], time(9, 0))
+
+    def test_booked_slots_are_excluded_from_available(self):
+        """Занятые интервалы времени должны исключаться из доступных слотов"""
+        from apps.appointments.services import get_available_slots
+
+        # Создаем существующую запись на 10:00 (длительность 1 час)
+        existing_appointment = Appointment(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time,  # 10:00
+            status='booked'
+        )
+        existing_appointment.full_clean()
+        existing_appointment.save()
+
+        # Получаем свободные слоты на этот же день
+        slots = get_available_slots(self.master, self.monday, self.service)
+
+        # Время 10:00 должно быть исключено из доступных окон
+        self.assertNotIn(time(10, 0), slots)
+
+    def test_slots_generation_respects_service_duration(self):
+        """Слоты в конце рабочего дня не должны создаваться, если услуга не успеет завершиться"""
+        from apps.appointments.services import get_available_slots
+
+        # Конец рабочего дня в setUp — 18:00.
+        # Для услуги длительностью 1 час (self.service) последний возможный слот — 17:00.
+        slots_short = get_available_slots(self.master, self.monday, self.service)
+        self.assertIn(time(17, 0), slots_short)
+        self.assertNotIn(time(17, 30), slots_short)
+
+        # Для длинной услуги в 3 часа (self.long_service) последний возможный слот — 15:00.
+        slots_long = get_available_slots(self.master, self.monday, self.long_service)
+        self.assertIn(time(15, 0), slots_long)
+        self.assertNotIn(time(16, 0), slots_long)
+
+    def test_weekend_returns_no_slots(self):
+        """В выходные дни (согласно WorkSchedule) слоты не должны генерироваться"""
+        from apps.appointments.services import get_available_slots
+
+        # Вычисляем ближайшую субботу (следующую за тестовым понедельником)
+        saturday = self.monday + timedelta(days=5)
+
+        slots = get_available_slots(self.master, saturday, self.service)
+        self.assertEqual(slots, [])
+
+    def test_past_datetime_slots_are_filtered_out_today(self):
+        """Если слоты запрашиваются на 'сегодня', уже прошедшие часы должны отсекаться"""
+        from apps.appointments.services import get_available_slots
+        from unittest.mock import patch
+
+        # Фиксируем текущее локальное время на 14:30 понедельника
+        mock_now = timezone.make_aware(
+            datetime.combine(self.monday, time(14, 30))
+        )
+
+        with patch('django.utils.timezone.localtime', return_value=mock_now), \
+             patch('django.utils.timezone.localdate', return_value=self.monday):
+
+            slots = get_available_slots(self.master, self.monday, self.service)
+
+            # Слоты до 14:30 (например, 09:00, 10:00, 14:00) не должны попасть в выдачу
+            for slot in slots:
+                slot_datetime = timezone.make_aware(datetime.combine(self.monday, slot))
+                self.assertGreaterEqual(slot_datetime, mock_now)
+
+    # ==================== ТЕСТЫ ИСКЛЮЧЕНИЙ ИЗ РАСПИСАНИЯ ====================
+
+    def test_schedule_exception_full_day_off_returns_no_slots(self):
+        """Исключение типа 'выходной' полностью отменяет генерацию слотов на конкретную дату"""
+        from apps.appointments.services import get_available_slots
+
+        # Создаем исключение: в тестовый понедельник мастер берет выходной
+        ScheduleException.objects.create(
+            master=self.master,
+            date=self.monday,
+            is_working=False,
+            # Время начала и конца не важны, так как день нерабочий
+            start_time=None,
+            end_time=None
+        )
+
+        # Запрашиваем слоты на этот понедельник
+        slots = get_available_slots(self.master, self.monday, self.service)
+
+        # Результат должен быть абсолютно пустым, несмотря на регулярный WorkSchedule
+        self.assertEqual(slots, [])
+
+    def test_schedule_exception_short_day_overrides_regular_schedule(self):
+        """Исключение с измененным временем перезаписывает стандартные часы работы"""
+        from apps.appointments.services import get_available_slots
+
+        # Стандартный рабочий день в setUp: 09:00 - 18:00.
+        # Создаем исключение: короткий день в понедельник с 12:00 до 15:00
+        ScheduleException.objects.create(
+            master=self.master,
+            date=self.monday,
+            is_working=True,
+            start_time=time(12, 0),
+            end_time=time(15, 0)
+        )
+
+        slots = get_available_slots(self.master, self.monday, self.service)
+
+        # Проверяем, что утренние слоты исчезли
+        self.assertNotIn(time(9, 0), slots)
+        self.assertNotIn(time(11, 0), slots)
+
+        # Проверяем, что слоты генерируются внутри нового окна
+        self.assertIn(time(12, 0), slots)
+        self.assertIn(time(13, 0), slots)
+
+        # Последний возможный слот для 1-часовой услуги при закрытии в 15:00 — это 14:00
+        self.assertIn(time(14, 0), slots)
+        self.assertNotIn(time(15, 0), slots)
+
+    def test_schedule_exception_working_day_on_regular_weekend(self):
+        """Исключение может сделать регулярный выходной день (например, субботу) рабочим"""
+        from apps.appointments.services import get_available_slots, invalidate_slots_cache
+
+        # Вычисляем ближайшую субботу (в setUp она настроена как is_working=False)
+        saturday = self.monday + timedelta(days=5)
+
+        # На всякий случай проверяем, что без исключений там пусто
+        slots_before = get_available_slots(self.master, saturday, self.service)
+        self.assertEqual(slots_before, [])
+
+        # Создаем исключение: рабочая суббота с 10:00 до 14:00
+        ScheduleException.objects.create(
+            master=self.master,
+            date=saturday,
+            is_working=True,
+            start_time=time(10, 0),
+            end_time=time(14, 0)
+        )
+        # СБРАСЫВАЕМ КЭШ, чтобы функция увидела изменения в БД
+        invalidate_slots_cache(self.master, saturday)
+
+        slots_after = get_available_slots(self.master, saturday, self.service)
+
+        # Теперь в субботу должны появиться доступные окна
+        self.assertTrue(len(slots_after) > 0)
+        self.assertIn(time(10, 0), slots_after)
+        self.assertNotIn(time(9, 0), slots_after)

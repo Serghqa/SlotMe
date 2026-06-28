@@ -14,37 +14,68 @@
     </div>
     <div class="col-md-8">
         <h2>{{ master.user.get_full_name|default:master.user.username }}</h2>
-
         {% if master.bio %}
             <p class="text-muted">{{ master.bio }}</p>
         {% endif %}
-
-        <h5 class="mt-4">Услуги</h5>
-        {% if master.services.all %}
-            <ul class="list-group mb-4">
-                {% for service in master.services.all %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>{{ service.name }}</strong>
-                            {% if service.description %}
-                                <br><small class="text-muted">{{ service.description }}</small>
-                            {% endif %}
-                        </div>
-                        <span class="badge bg-primary rounded-pill">{{ service.price }}₽ — {{ service.duration }}</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="text-muted">Услуги не указаны.</p>
-        {% endif %}
-
-        <div class="card mt-4">
-            <div class="card-body">
-                <h5 class="card-title">Записаться</h5>
-                <p class="card-text text-muted">Выберите услугу и дату, чтобы увидеть свободное время.</p>
-                <button class="btn btn-primary" disabled>Скоро</button>
+        <h5 class="mt-4">Выберите услугу и дату</h5>
+        <!-- Форма выбора -->
+        <form method="get" class="row g-3 mb-4" id="booking-filter-form">
+            <div class="col-md-5">
+                <label class="form-label">Услуга</label>
+                <select name="service_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">-- Выберите услугу --</option>
+                    {% for service in services %}
+                        <option value="{{ service.id }}"
+                            {% if selected_service and selected_service.id == service.id %}selected{% endif %}>
+                            {{ service.name }} — {{ service.price }}₽ ({{ service.duration }})
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
-        </div>
+            <div class="col-md-5">
+                <label class="form-label">Дата</label>
+                <input type="date" name="date" id="date" class="form-control"
+                    value="{{ raw_date_str|default:'' }}"
+                    min="{{ today|date:'Y-m-d' }}"
+                    onchange="this.form.submit()">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-secondary w-100 d-md-none">Показать</button>
+            </div>
+        </form>
+        <!-- Свободные слоты -->
+        {% if selected_date and selected_service %}
+            <h5>Свободное время на {{ selected_date|date:"d.m.Y" }}</h5>
+            <p class="text-muted">{{ selected_service.name }} — {{ selected_service.price }}₽</p>
+            {% if slots %}
+                <div class="d-grid gap-2 d-md-flex flex-wrap">
+                    {% for slot in slots %}
+                        <form method="post" action="{% url 'appointments:book' master.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="service_id" value="{{ selected_service.id }}">
+                            <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                            <input type="hidden" name="time" value="{{ slot|time:'H:i' }}">
+                            <button type="submit" class="btn btn-outline-primary m-1">
+                                {{ slot|time:'H:i' }}
+                            </button>
+                        </form>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-warning">Нет свободных слотов на эту дату.</div>
+            {% endif %}
+        {% else %}
+            <!-- Показываем подсказку, если не выбран один или оба компонента -->
+            <p class="text-muted">
+                {% if not selected_service and not selected_date %}
+                    Выберите услугу и дату, чтобы увидеть свободное время.
+                {% elif not selected_service %}
+                    Выберите услугу.
+                {% else %}
+                    Выберите дату.
+                {% endif %}
+            </p>
+        {% endif %}
     </div>
 </div>
 {% endblock content %}
