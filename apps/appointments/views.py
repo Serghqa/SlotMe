@@ -82,3 +82,36 @@ def client_appointments_view(request):
         client=request.user
     ).select_related('master__user', 'service').order_by('-start_datetime')
     return render(request, 'appointments/client_list.html', {'appointments': appointments})
+
+
+@login_required
+def cancel_appointment_view(request, appointment_id):
+    appointment = get_object_or_404(
+        Appointment,
+        id=appointment_id,
+        client=request.user,
+        status='booked'
+    )
+
+    if appointment.is_past:
+        messages.error(request, 'Нельзя отменить прошедшую запись.')
+        return redirect('appointments:client_list')
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '').strip()
+        if not reason:
+            reason = 'Отменено клиентом'
+        else:
+            reason = reason[:500]
+        appointment.status = 'cancelled'
+        appointment.cancelled_at = timezone.localtime()
+        appointment.cancel_reason = reason
+        appointment.save()
+
+        # Инвалидация кэша
+        invalidate_slots_cache(appointment.master, appointment.start_datetime.date())
+
+        messages.success(request, 'Запись отменена.')
+        return redirect('appointments:client_list')
+
+    return render(request, 'appointments/cancel_confirm.html', {'appointment': appointment})

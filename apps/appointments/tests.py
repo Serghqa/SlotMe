@@ -1108,3 +1108,140 @@ class AppointmentBookingTestCase(TestCase):
         messages = list(get_messages(response.wsgi_request))
         self.assertEqual(messages[0].level_tag, 'error')
         self.assertEqual(str(messages[0]), 'Выберите дату и время.')
+
+    # ==================== ТЕСТЫ ВЬЮХИ ОТМЕНЫ ЗАПИСИ ====================
+
+    def test_cancel_view_get_request_renders_confirmation(self):
+        """GET-запрос к вьюхе отмены возвращает страницу подтверждения с деталями записи"""
+        from django.urls import reverse
+
+        # Создаем активную запись для клиента из setUp
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time,
+            status='booked'
+        )
+
+        self.client.force_login(self.client_user)
+        url = reverse('appointments:cancel', kwargs={'appointment_id': appointment.id})
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'appointments/cancel_confirm.html')
+        self.assertEqual(response.context['appointment'], appointment)
+
+    def test_successful_appointment_cancellation_via_post(self):
+        """Успешный POST-запрос меняет статус записи, фиксирует время, причину и чистит кэш"""
+        from django.urls import reverse
+        from django.core.cache import cache
+
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time,
+            status='booked'
+        )
+
+        # Искусственно забиваем кэш мусором, чтобы проверить его инвалидацию
+        cache_key = f"slots_{self.master.id}_{self.monday}_{self.service.id}"
+        cache.set(cache_key, ['fake_slot'], 60)
+
+        self.client.force_login(self.client_user)
+        url = reverse('appointments:cancel', kwargs={'appointment_id': appointment.id})
+
+        # Отправляем POST с кастомной причиной отмены
+        response = self.client.post(url, {'reason': '   Изменились планы   '})
+
+        # Проверяем редирект обратно в список записей
+        self.assertRedirects(response, reverse('appointments:client_list'))
+
+        # Обновляем объект из базы данных для проверки изменений
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.status, 'cancelled')
+        self.assertEqual(appointment.cancel_reason, 'Изменились планы')  # Проверка .strip()
+        self.assertIsNotNone(appointment.cancelled_at)
+
+        # Проверяем, что кэш слотов на эту дату был успешно удален
+        self.assertIsNone(cache.get(cache_key))
+
+    def test_cancel_view_empty_reason_fallback(self):
+        """Если причина отмены отправлена пустой, бэкенд подставляет дефолтный текст"""
+        from django.urls import reverse
+
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time,
+            status='booked'
+        )
+
+        self.client.force_login(self.client_user)
+        url = reverse('appointments:cancel', kwargs={'appointment_id': appointment.id})
+
+        # Отправляем пустую строку в поле причины
+        self.client.post(url, {'reason': '   '})
+
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.cancel_reason, 'Отменено клиентом')
+
+    def test_security_cannot_cancel_someone_elses_appointment(self):
+        """Безопасность: Клиент не может открыть или отменить запись другого пользователя (404)"""
+        from django.urls import reverse
+
+        # Создаем другого пользователя, который станет владельцем записи
+        other_user = User.objects.create(username='other_client', email='other@example.com')
+        appointment = Appointment.objects.create(
+            client=other_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time,
+            status='booked'
+        )
+
+        # Логиним нашего стандартного клиента (self.client_user)
+        self.client.force_login(self.client_user)
+        url = reverse('appointments:cancel', kwargs={'appointment_id': appointment.id})
+
+        # Попытка GET-доступа должна выбить 404 Not Found
+        response_get = self.client.get(url)
+        self.assertEqual(response_get.status_code, 404)
+
+        # Попытка POST-отмены должна также вернуть 404
+        response_post = self.client.post(url, {'reason': 'Взлом'})
+        self.assertEqual(response_post.status_code, 404)
+
+        # Проверяем, что в базе запись осталась нетронутой
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.status, 'booked')
+
+    def test_cannot_cancel_past_appointment(self):
+        """Нельзя отменить запись, если время визита уже прошло (свойство is_past)"""
+        from django.urls import reverse
+        from unittest.mock import PropertyMock, patch
+
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time,
+            status='booked'
+        )
+
+        self.client.force_login(self.client_user)
+        url = reverse('appointments:cancel', kwargs={'appointment_id': appointment.id})
+
+        # Имитируем, что запись уже в прошлом, подменяя свойство is_past на True
+        with patch.object(Appointment, 'is_past', new_callable=PropertyMock, return_value=True):
+            response = self.client.post(url, {'reason': 'Слишком поздно'})
+
+            # Должен сработать редирект с ошибкой
+            self.assertRedirects(response, reverse('appointments:client_list'))
+
+            # Статус записи в БД не должен измениться
+            appointment.refresh_from_db()
+            self.assertEqual(appointment.status, 'booked')

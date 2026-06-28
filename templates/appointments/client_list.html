@@ -14,7 +14,7 @@
                     <th>Услуга</th>
                     <th>Дата и время</th>
                     <th>Статус</th>
-                    <th class="text-end">Действие</th> <!-- Выровняли заголовок кнопки -->
+                    <th>Действие</th> <!-- Выровняли заголовок кнопки -->
                 </tr>
             </thead>
             <tbody>
@@ -36,7 +36,9 @@
                         </td>
                         <td>
                             {% if appointment.can_be_cancelled %}
-                                <button class="btn btn-sm btn-outline-danger">Отменить</button>
+                                <a href="{% url 'appointments:cancel' appointment.id %}" class="btn btn-sm btn-outline-danger">
+                                    Отменить
+                                </a>
                             {% endif %}
                         </td>
                     </tr>

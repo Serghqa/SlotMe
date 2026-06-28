@@ -19,7 +19,12 @@
 
         {% if user.is_master %}
             <div class="mt-3">
-                <a href="#" class="btn btn-outline-primary">Мои записи</a>
+                {% comment %} <a href="{% url 'appointments:master_schedule' %}" class="btn btn-outline-primary">Моё расписание</a> {% endcomment %}
+                <a href="#" class="btn btn-outline-primary">Моё расписание</a>
+            </div>
+        {% else %}
+            <div class="mt-3">
+                <a href="{% url 'appointments:client_list' %}" class="btn btn-outline-primary">Мои записи</a>
             </div>
         {% endif %}
     </div>
