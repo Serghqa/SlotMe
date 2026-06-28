@@ -5,6 +5,8 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db import IntegrityError, transaction
+from django.urls import reverse
+from django.contrib.messages import get_messages
 from zoneinfo import ZoneInfo
 from .models import Appointment
 
@@ -1044,3 +1046,65 @@ class AppointmentBookingTestCase(TestCase):
         self.assertTrue(len(slots_after) > 0)
         self.assertIn(time(10, 0), slots_after)
         self.assertNotIn(time(9, 0), slots_after)
+
+    # ==================== ТЕСТЫ appointments.views ====================
+
+    def test_anonymous_user_cannot_book(self):
+        """Анонимный пользователь перенаправляется на страницу авторизации"""
+        url = reverse('appointments:book', kwargs={'master_id': self.master.id})
+
+        # Делаем POST без авторизации
+        response = self.client.post(url, {
+            'service_id': self.service.id,
+            'date': self.monday.strftime('%Y-%m-%d'),
+            'time': '10:00'
+        })
+
+        # Django должен выдать редирект (302) на страницу логина
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('users:login'), response.url)
+
+    def test_successful_booking_via_post(self):
+        """Авторизованный клиент успешно бронирует слот и перенаправляется в список записей"""
+        url = reverse('appointments:book', kwargs={'master_id': self.master.id})
+
+        # Логиним клиента через тестовый клиент
+        self.client.force_login(self.client_user)
+
+        # Отправляем валидную форму
+        response = self.client.post(url, {
+            'service_id': self.service.id,
+            'date': self.monday.strftime('%Y-%m-%d'),
+            'time': '10:00'
+        })
+
+        # Проверяем редирект (PRG паттерн) на страницу списка его записей
+        self.assertRedirects(response, reverse('appointments:client_list'))
+
+        # Проверяем, что запись реально физически появилась в базе данных
+        self.assertTrue(Appointment.objects.filter(client=self.client_user, master=self.master).exists())
+
+        # Проверяем, что пользователю записалось сообщение об успехе
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0].level_tag, 'success')
+
+    def test_booking_validation_error_redirects_back(self):
+        """При ошибке валидации (например, пустая дата) вьюха возвращает на страницу мастера с ошибкой"""
+        url = reverse('appointments:book', kwargs={'master_id': self.master.id})
+        self.client.force_login(self.client_user)
+
+        # Отправляем форму без времени
+        response = self.client.post(url, {
+            'service_id': self.service.id,
+            'date': self.monday.strftime('%Y-%m-%d'),
+            'time': ''  # Пустое время
+        })
+
+        # Вьюха должна вернуть нас на страницу деталей мастера
+        self.assertRedirects(response, reverse('masters:master_detail', kwargs={'master_id': self.master.id}))
+
+        # Проверяем, что в сессию упала ошибка
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(messages[0].level_tag, 'error')
+        self.assertEqual(str(messages[0]), 'Выберите дату и время.')

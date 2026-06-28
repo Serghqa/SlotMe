@@ -55,3 +55,87 @@ class UserWorkflowTestCase(TestCase):
         """Проверяем свойство модели определения связной модели мастера"""
         self.assertEqual(self.master_users[0].is_master, True)
         self.assertEqual(self.users[15].is_master, False)
+
+    # ==================== ТЕСТЫ ВЬЮХ И ФОРМ ====================
+
+    def test_registration_form_and_successful_view_post(self):
+        """Тест формы и вьюхи: успешная регистрация нового уникального пользователя"""
+        from apps.users.forms import RegistrationForm
+        from django.urls import reverse
+        from django.contrib.messages import get_messages
+
+        form_data = {
+            'username': 'Unique_New_User_999',
+            'email': 'unique_new_email@example.com',
+            'phone': '+79991112233',
+            'password1': 'ValidPassword123',
+            'password2': 'ValidPassword123',
+        }
+
+        # 1. Валидация на уровне формы
+        form = RegistrationForm(data=form_data)
+        self.assertTrue(form.is_valid())
+
+        # 2. Валидация на уровне вьюхи при POST запросе
+        response = self.client.post(reverse('users:register'), data=form_data)
+
+        # Ожидаем редирект на страницу авторизации
+        self.assertRedirects(response, reverse('users:login'))
+
+        # Проверяем, что счетчик пользователей увеличился (стало 101)
+        self.assertEqual(User.objects.all().count(), 101)
+        self.assertTrue(User.objects.filter(username='Unique_New_User_999').exists())
+
+        # Проверяем запись сообщения об успехе
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), 'Регистрация прошла успешно! Теперь войдите.')
+
+    def test_registration_form_duplicate_email_error(self):
+        """Тест формы: блокировка регистрации, если email уже занят одним из 100 пользователей"""
+        from apps.users.forms import RegistrationForm
+
+        # Берем email одного из пользователей, созданных в setUp (например, User_50)
+        duplicate_email = 'email_50@example.com'
+
+        form_data = {
+            'username': 'completely_new_username',
+            'email': duplicate_email.upper(),  # Проверяем перевод в нижний регистр clean_email()
+            'password1': 'ValidPassword123',
+            'password2': 'ValidPassword123',
+        }
+
+        form = RegistrationForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('email', form.errors)
+        self.assertEqual(form.errors['email'][0], 'Пользователь с таким email уже зарегистрирован.')
+
+    def test_authenticated_user_cannot_access_register_view(self):
+        """Тест вьюхи: авторизованный клиент принудительно перенаправляется с регистрации на 'home'"""
+        from django.urls import reverse
+
+        # Берем 50-го пользователя из setUp и принудительно логиним его
+        client_user = User.objects.get(username='User_50')
+        self.client.force_login(client_user)
+
+        response = self.client.get(reverse('users:register'))
+        self.assertRedirects(response, reverse('home'))
+
+    def test_profile_view_access_control(self):
+        """Тест вьюхи: аноним отправляется на логин, авторизованный успешно видит профиль"""
+        from django.urls import reverse
+
+        url = reverse('users:profile')
+
+        # 1. Проверка для анонимного пользователя
+        response_anon = self.client.get(url)
+        self.assertEqual(response_anon.status_code, 302)
+        self.assertIn(reverse('users:login'), response_anon.url)
+
+        # 2. Проверка для авторизованного пользователя
+        client_user = User.objects.get(username='User_51')
+        self.client.force_login(client_user)
+
+        response_auth = self.client.get(url)
+        self.assertEqual(response_auth.status_code, 200)
+        self.assertTemplateUsed(response_auth, 'users/profile.html')

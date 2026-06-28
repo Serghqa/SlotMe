@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
+from django.contrib import messages
 from datetime import datetime
 from .models import Master
 from apps.appointments.services import get_available_slots
@@ -29,6 +30,7 @@ def master_detail_view(request, master_id):
         try:
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
+            messages.error(request, 'Указан неверный формат даты!')
             date_str = None
 
     if service_id:

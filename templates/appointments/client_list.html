@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Мои записи — SlotMe{% endblock title %}
+
+{% block content %}
+<h2 class="mb-4">Мои записи</h2>
+
+{% if appointments %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Мастер</th>
+                    <th>Услуга</th>
+                    <th>Дата и время</th>
+                    <th>Статус</th>
+                    <th class="text-end">Действие</th> <!-- Выровняли заголовок кнопки -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for appointment in appointments %}
+                    <tr>
+                        <td>{{ appointment.master.user.get_full_name|default:appointment.master.user.username }}</td>
+                        <td>{{ appointment.service.name|default:"—" }}</td>
+                        <td>{{ appointment.start_datetime|date:"d.m.Y H:i" }}</td>
+                        <td>
+                            {% if appointment.status == 'booked' %}
+                                <span class="badge bg-primary">Забронирована</span>
+                            {% elif appointment.status == 'completed' %}
+                                <span class="badge bg-success">Завершена</span>
+                            {% elif appointment.status == 'cancelled' %}
+                                <span class="badge bg-secondary">Отменена</span>
+                            {% elif appointment.status == 'no_show' %}
+                                <span class="badge bg-warning">Неявка</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if appointment.can_be_cancelled %}
+                                <button class="btn btn-sm btn-outline-danger">Отменить</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">У вас пока нет записей.</div>
+    <a href="{% url 'masters:master_list' %}" class="btn btn-primary">Выбрать мастера</a>
+{% endif %}
+{% endblock content %}
