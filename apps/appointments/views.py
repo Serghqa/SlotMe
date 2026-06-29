@@ -43,26 +43,31 @@ def book_appointment_view(request, master_id):
     # Проверка: слот свободен (без кэша — прямой запрос)
     end_datetime = start_datetime + service.duration
 
-    with transaction.atomic():
-        overlapping = Appointment.objects.filter(
-            master=master,
-            start_datetime__lt=end_datetime,
-            end_datetime__gt=start_datetime,
-            status='booked'
-        ).exists()
+    try:
+        with transaction.atomic():
+            overlapping = Appointment.objects.select_for_update().filter(
+                master=master,
+                start_datetime__lt=end_datetime,
+                end_datetime__gt=start_datetime,
+                status='booked'
+            ).exists()
 
-        if overlapping:
-            messages.error(request, 'Это время только что заняли. Выберите другое время.')
-            invalidate_slots_cache(master, start_datetime.date())
-            return redirect('masters:master_detail', master_id=master_id)
+            if overlapping:
+                messages.error(request, 'Это время только что заняли. Выберите другое время.')
+                invalidate_slots_cache(master, start_datetime.date())
+                return redirect('masters:master_detail', master_id=master_id)
 
-        # Создаём запись
-        appointment = Appointment.objects.create(
-            client=request.user,
-            master=master,
-            service=service,
-            start_datetime=start_datetime,
-        )
+            # Создаём запись
+            appointment = Appointment.objects.create(
+                client=request.user,
+                master=master,
+                service=service,
+                start_datetime=start_datetime,
+            )
+    except Exception:
+        invalidate_slots_cache(master, start_datetime.date())
+        messages.error(request, 'Не удалось создать запись. Попробуйте снова.')
+        return redirect('masters:master_detail', master_id=master_id)
 
     # Сбрасываем кэш слотов
     invalidate_slots_cache(master, start_datetime.date())
