@@ -72,12 +72,12 @@ class Appointment(AppointmentValidationMixin, models.Model):
         if self.service and self.start_datetime:
             self.end_datetime = self.start_datetime + self.service.duration
         if self.status == 'cancelled' and not self.cancelled_at:
-            self.cancelled_at = timezone.now()
+            self.cancelled_at = timezone.localtime()
         super().save(*args, **kwargs)
 
     @property
     def is_past(self):
-        return self.start_datetime < timezone.now()
+        return self.start_datetime < timezone.localtime()
 
     @property
     def can_be_cancelled(self):
