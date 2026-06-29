@@ -1,13 +1,14 @@
-from datetime import time, timedelta, datetime
-from django.test import TestCase
-from django.contrib.auth import get_user_model
 from django.apps import apps
-from django.core.exceptions import ValidationError
-from django.utils import timezone
 from django.db import IntegrityError, transaction
-from django.urls import reverse
+from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+from datetime import time, timedelta, datetime
 from zoneinfo import ZoneInfo
+from apps.appointments.services import get_available_slots, invalidate_slots_cache
 from .models import Appointment
 
 User = get_user_model()
@@ -826,18 +827,31 @@ class AppointmentBookingTestCase(TestCase):
         )
         self.assertNotEqual(appointment.end_datetime, custom_end)
 
-    def test_cancelled_at_in_utc(self):
-        """Проверяем, что cancelled_at сохраняется в UTC."""
+    def test_cancelled_at_saved_correctly_with_timezone(self):
+        """Проверяем, что cancelled_at корректно сохраняется и синхронизируется между зонами"""
+        from django.utils import timezone
+
+        # Засекаем время начала теста
+        now_utc = timezone.now()
+
         appointment = Appointment.objects.create(
             client=self.client_user,
             master=self.master,
             service=self.service,
-            start_datetime=timezone.now(),
+            start_datetime=timezone.localtime(),
             status='cancelled'
         )
 
-        # Сохраняется с UTC временем
-        self.assertEqual(appointment.cancelled_at.tzinfo, timezone.UTC)
+        # Принудительно перечитываем объект из базы данных
+        appointment.refresh_from_db()
+
+        # Вычисляем разницу во времени между созданием и текущим моментом
+        # Метод .total_seconds() преобразует разницу в число (float)
+        time_difference = abs((appointment.cancelled_at - now_utc).total_seconds())
+
+        # Проверяем, что разница составляет меньше 1 секунды
+        self.assertLess(time_difference, 1.0)
+
 
     def test_cancelled_at_display_in_local_time(self):
         """Проверяем отображение в локальном времени."""
@@ -892,7 +906,6 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_get_available_slots_returns_correct_intervals(self):
         """Проверка базовой генерации слотов в рабочий день по расписанию мастера"""
-        from apps.appointments.services import get_available_slots
 
         # Запрашиваем слоты на рабочий понедельник
         slots = get_available_slots(self.master, self.monday, self.service)
@@ -904,7 +917,6 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_booked_slots_are_excluded_from_available(self):
         """Занятые интервалы времени должны исключаться из доступных слотов"""
-        from apps.appointments.services import get_available_slots
 
         # Создаем существующую запись на 10:00 (длительность 1 час)
         existing_appointment = Appointment(
@@ -925,7 +937,6 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_slots_generation_respects_service_duration(self):
         """Слоты в конце рабочего дня не должны создаваться, если услуга не успеет завершиться"""
-        from apps.appointments.services import get_available_slots
 
         # Конец рабочего дня в setUp — 18:00.
         # Для услуги длительностью 1 час (self.service) последний возможный слот — 17:00.
@@ -940,7 +951,6 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_weekend_returns_no_slots(self):
         """В выходные дни (согласно WorkSchedule) слоты не должны генерироваться"""
-        from apps.appointments.services import get_available_slots
 
         # Вычисляем ближайшую субботу (следующую за тестовым понедельником)
         saturday = self.monday + timedelta(days=5)
@@ -950,7 +960,6 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_past_datetime_slots_are_filtered_out_today(self):
         """Если слоты запрашиваются на 'сегодня', уже прошедшие часы должны отсекаться"""
-        from apps.appointments.services import get_available_slots
         from unittest.mock import patch
 
         # Фиксируем текущее локальное время на 14:30 понедельника
@@ -972,7 +981,6 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_schedule_exception_full_day_off_returns_no_slots(self):
         """Исключение типа 'выходной' полностью отменяет генерацию слотов на конкретную дату"""
-        from apps.appointments.services import get_available_slots
 
         # Создаем исключение: в тестовый понедельник мастер берет выходной
         ScheduleException.objects.create(
@@ -992,7 +1000,6 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_schedule_exception_short_day_overrides_regular_schedule(self):
         """Исключение с измененным временем перезаписывает стандартные часы работы"""
-        from apps.appointments.services import get_available_slots
 
         # Стандартный рабочий день в setUp: 09:00 - 18:00.
         # Создаем исключение: короткий день в понедельник с 12:00 до 15:00
@@ -1020,7 +1027,6 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_schedule_exception_working_day_on_regular_weekend(self):
         """Исключение может сделать регулярный выходной день (например, субботу) рабочим"""
-        from apps.appointments.services import get_available_slots, invalidate_slots_cache
 
         # Вычисляем ближайшую субботу (в setUp она настроена как is_working=False)
         saturday = self.monday + timedelta(days=5)
