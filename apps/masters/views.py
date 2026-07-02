@@ -2,8 +2,8 @@ from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from django.contrib import messages
 from datetime import datetime
-from .models import Master
 from apps.appointments.services import get_available_slots
+from .models import Master
 
 
 def master_list_view(request):

@@ -1,6 +1,9 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
 from django.apps import apps
+from django.contrib.auth import get_user_model
+from django.contrib.messages import get_messages
+from django.test import TestCase
+from django.urls import reverse
+from apps.users.forms import RegistrationForm
 
 User = get_user_model()
 Master = apps.get_model('masters', 'Master')
@@ -60,9 +63,6 @@ class UserWorkflowTestCase(TestCase):
 
     def test_registration_form_and_successful_view_post(self):
         """Тест формы и вьюхи: успешная регистрация нового уникального пользователя"""
-        from apps.users.forms import RegistrationForm
-        from django.urls import reverse
-        from django.contrib.messages import get_messages
 
         form_data = {
             'username': 'Unique_New_User_999',
@@ -93,7 +93,6 @@ class UserWorkflowTestCase(TestCase):
 
     def test_registration_form_duplicate_email_error(self):
         """Тест формы: блокировка регистрации, если email уже занят одним из 100 пользователей"""
-        from apps.users.forms import RegistrationForm
 
         # Берем email одного из пользователей, созданных в setUp (например, User_50)
         duplicate_email = 'email_50@example.com'
@@ -112,7 +111,6 @@ class UserWorkflowTestCase(TestCase):
 
     def test_authenticated_user_cannot_access_register_view(self):
         """Тест вьюхи: авторизованный клиент принудительно перенаправляется с регистрации на 'home'"""
-        from django.urls import reverse
 
         # Берем 50-го пользователя из setUp и принудительно логиним его
         client_user = User.objects.get(username='User_50')
@@ -123,7 +121,6 @@ class UserWorkflowTestCase(TestCase):
 
     def test_profile_view_access_control(self):
         """Тест вьюхи: аноним отправляется на логин, авторизованный успешно видит профиль"""
-        from django.urls import reverse
 
         url = reverse('users:profile')
 

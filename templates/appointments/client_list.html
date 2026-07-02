@@ -5,6 +5,22 @@
 {% block content %}
 <h2 class="mb-4">Мои записи</h2>
 
+<!-- 1. ПЕРЕКЛЮЧАТЕЛИ ВКЛАДОК (ТАБЫ) -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link {% if current_tab == 'upcoming' %}active{% endif %}"
+           href="{% url 'appointments:client_list' %}?tab=upcoming">
+            Предстоящие
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if current_tab == 'past' %}active{% endif %}"
+           href="{% url 'appointments:client_list' %}?tab=past">
+            Прошедшие и отмененные
+        </a>
+    </li>
+</ul>
+
 {% if appointments %}
     <div class="table-responsive">
         <table class="table table-hover">
@@ -14,7 +30,7 @@
                     <th>Услуга</th>
                     <th>Дата и время</th>
                     <th>Статус</th>
-                    <th>Действие</th> <!-- Выровняли заголовок кнопки -->
+                    <th>Действие</th>
                 </tr>
             </thead>
             <tbody>
@@ -25,7 +41,11 @@
                         <td>{{ appointment.start_datetime|date:"d.m.Y H:i" }}</td>
                         <td>
                             {% if appointment.status == 'booked' %}
-                                <span class="badge bg-primary">Забронирована</span>
+                                {% if appointment.is_past %}
+                                    <span class="badge bg-light text-dark border">Завершена (ожидает подтверждения)</span>
+                                {% else %}
+                                    <span class="badge bg-primary">Забронирована</span>
+                                {% endif %}
                             {% elif appointment.status == 'completed' %}
                                 <span class="badge bg-success">Завершена</span>
                             {% elif appointment.status == 'cancelled' %}
@@ -46,8 +66,53 @@
             </tbody>
         </table>
     </div>
+
+        <!-- 2. БЛОК ПАГИНАЦИИ BOOTSTRAP -->
+    {% if appointments.has_other_pages %}
+        <nav aria-label="Навигация по записямы">
+            <ul class="pagination justify-content-center">
+
+                <!-- Кнопка "Назад" -->
+                {% if appointments.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?tab={{ current_tab }}&page={{ appointments.previous_page_number }}">&laquo;</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                {% endif %}
+
+                <!-- Номера страниц -->
+                {% for num in appointments.paginator.page_range %}
+                    {% if appointments.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?tab={{ current_tab }}&page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Кнопка "Вперед" -->
+                {% if appointments.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?tab={{ current_tab }}&page={{ appointments.next_page_number }}">&raquo;</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                {% endif %}
+
+            </ul>
+        </nav>
+    {% endif %}
+
 {% else %}
-    <div class="alert alert-info">У вас пока нет записей.</div>
+     <div class="alert alert-info mb-3">
+        {% if current_tab == 'past' %}
+            У вас нет прошедших записей.
+        {% else %}
+            У вас пока нет активных записей.
+        {% endif %}
+    </div>
     <a href="{% url 'masters:master_list' %}" class="btn btn-primary">Выбрать мастера</a>
 {% endif %}
 {% endblock content %}

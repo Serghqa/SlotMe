@@ -1,11 +1,16 @@
-from datetime import datetime, time, date, timedelta
-from django.db.models.functions import Cast
-from django.db.models import DateTimeField
+from django.apps import apps
 from django.core.cache import cache
+from django.db.models import DateTimeField
+from django.db.models.functions import Cast
 from django.utils import timezone
-from apps.masters.models import Master, WorkSchedule, ScheduleException
-from apps.services.models import Service
+from datetime import datetime, date, timedelta
 from .models import Appointment
+
+
+Master = apps.get_model('masters', 'Master')
+WorkSchedule = apps.get_model('masters', 'WorkSchedule')
+ScheduleException = apps.get_model('masters', 'ScheduleException')
+Service = apps.get_model('services', 'Service')
 
 
 def get_available_slots(master: Master, date: date, service: Service):

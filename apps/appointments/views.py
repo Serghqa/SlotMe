@@ -1,13 +1,17 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.apps import apps
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db import transaction
+from django.db.models import Q, F
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from django.db import transaction
 from datetime import datetime
-from apps.masters.models import Master
-from apps.services.models import Service
 from .models import Appointment
-from .services import get_available_slots, invalidate_slots_cache
+from .services import invalidate_slots_cache
+
+
+Master = apps.get_model('masters', 'Master')
 
 
 @login_required
@@ -83,10 +87,46 @@ def book_appointment_view(request, master_id):
 
 @login_required
 def client_appointments_view(request):
-    appointments = Appointment.objects.filter(
+    # 1. Получаем базовый QuerySet записей текущего пользователя
+    queryset = Appointment.objects.filter(
         client=request.user
     ).select_related('master__user', 'service').order_by('-start_datetime')
-    return render(request, 'appointments/client_list.html', {'appointments': appointments})
+
+    # 2. Определяем текущую вкладку (по умолчанию 'upcoming')
+    tab = request.GET.get('tab', 'upcoming')
+    now = timezone.localtime()
+
+    # 3. Фильтруем данные в зависимости от выбранной вкладки
+    if tab == 'past':
+        # Прошедшими считаются записи:
+        # Либо у них финальный статус (completed, cancelled, no_show)
+        # Либо статус все еще 'booked', но время окончания приема (start_datetime + duration) УЖЕ В ПРОШЛОМ
+        appointments_list = queryset.filter(
+            Q(status__in=['completed', 'cancelled', 'no_show']) |
+            Q(status='booked', end_datetime__lt=now)
+        )
+    else:
+        appointments_list = queryset.filter(
+            status='booked',
+            start_datetime__gte=now
+        )
+    # 4. Пагинация: показываем по 10 записей на одной странице
+    paginator = Paginator(appointments_list, 10)
+    page = request.GET.get('page')
+
+    try:
+        appointments = paginator.page(page)
+    except PageNotAnInteger:
+        appointments = paginator.page(1)
+    except EmptyPage:
+        appointments = paginator.page(paginator.num_pages)
+
+    context = {
+        'appointments': appointments,
+        'current_tab': tab
+    }
+
+    return render(request, 'appointments/client_list.html', context)
 
 
 @login_required

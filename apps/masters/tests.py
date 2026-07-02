@@ -1,10 +1,10 @@
-from datetime import time, timedelta
-from django.test import TestCase
-from django.contrib.auth import get_user_model
 from django.apps import apps
-from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.test import TestCase
 from django.utils import timezone
+from datetime import time, timedelta
 
 from .models import Master, WorkSchedule, ScheduleException
 
