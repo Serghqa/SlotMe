@@ -1,16 +1,15 @@
 from django.contrib.auth.decorators import user_passes_test
-from django.shortcuts import redirect
 
 
-def master_required(view_func):
-    """Пускает только активных мастеров."""
-    def check(user):
-        return user.is_authenticated and user.is_master
-    return user_passes_test(check, login_url='users:login')(view_func)
+def check_is_master(user):
+    """Проверяет, что пользователь авторизован и является активным мастером."""
+    return user.is_authenticated and user.is_master
 
 
-def admin_required(view_func):
-    """Пускает только администраторов."""
-    def check(user):
-        return user.is_authenticated and user.is_admin
-    return user_passes_test(check, login_url='users:login')(view_func)
+def check_is_admin(user):
+    """Проверяет, что пользователь авторизован и является администратором."""
+    return user.is_authenticated and user.is_admin
+
+
+master_required = user_passes_test(check_is_master, login_url='users:login')
+admin_required = user_passes_test(check_is_admin, login_url='users:login')
