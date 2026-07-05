@@ -65,9 +65,7 @@ class AppointmentValidationMixin:
             )
 
     def _validate_not_past_time(self, errors):
-        start_local = timezone.localtime(self.start_datetime)
-        now_local = timezone.localtime()
-        if start_local < now_local:
+        if self.start_datetime < timezone.now():
             self._add_error(
                 errors=errors,
                 field_error='start_datetime',
@@ -75,7 +73,7 @@ class AppointmentValidationMixin:
             )
 
     def _validate_status_update(self, errors, status_labels, appontment_model):
-        now = timezone.localtime()
+        now = timezone.now()
         start_local = timezone.localtime(self.start_datetime)
         # Для существующей записи проверяем переходы
         old_status = appontment_model.objects.only('status').get(pk=self.pk).status
@@ -95,7 +93,7 @@ class AppointmentValidationMixin:
             return
 
         # Запрещаем 'completed' и 'no_show' для будущих записей
-        if self.status in ['completed', 'no_show'] and start_local > now:
+        if self.status in ['completed', 'no_show'] and self.start_datetime > now:
             text_error = (
                 f'Нельзя установить статус "{status_labels[self.status]}" '
                 f'для будущей записи ({start_local:%d.%m.%Y %H:%M}).'

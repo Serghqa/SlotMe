@@ -37,8 +37,9 @@ def master_detail_view(request, master_id):
         selected_service = get_object_or_404(services, id=service_id)
 
     # Считаем слоты только при наличии обоих параметров
+    today = timezone.localdate()
     if selected_date and selected_service:
-        if selected_date >= timezone.localdate():
+        if selected_date >= today:
             slots = get_available_slots(master, selected_date, selected_service)
 
     context = {
@@ -47,7 +48,7 @@ def master_detail_view(request, master_id):
         'selected_date': selected_date,
         'selected_service': selected_service,
         'slots': slots,
-        'today': timezone.localdate(),
+        'today': today,
         'raw_date_str': date_str,
     }
     return render(request, 'masters/master_detail.html', context)

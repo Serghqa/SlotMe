@@ -4,9 +4,12 @@ from django.db import transaction
 from django.db.models import Q, F
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from datetime import datetime
+from django.urls import reverse
+from apps.core.decorators import master_required
+from datetime import datetime, timedelta
 from .models import Appointment
 from .services import invalidate_slots_cache
 
@@ -40,7 +43,7 @@ def book_appointment_view(request, master_id):
         return redirect('masters:master_detail', master_id=master_id)
 
     # Проверка: не в прошлом
-    if start_datetime < timezone.localtime():
+    if start_datetime < timezone.now():
         messages.error(request, 'Нельзя записаться на прошедшее время.')
         return redirect('masters:master_detail', master_id=master_id)
 
@@ -160,3 +163,64 @@ def cancel_appointment_view(request, appointment_id):
         return redirect('appointments:client_list')
 
     return render(request, 'appointments/cancel_confirm.html', {'appointment': appointment})
+
+
+@master_required
+def master_schedule_view(request):
+    date_str = request.GET.get('date')
+    selected_date = timezone.localdate()
+    if date_str:
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    master = request.user.master_profile
+
+    appointments = Appointment.objects.filter(
+        master=master,
+        start_datetime__date=selected_date,
+        # status='booked'
+    ).select_related('client', 'service').order_by('start_datetime')
+
+    prev_date = selected_date - timedelta(days=1)
+    next_date = selected_date + timedelta(days=1)
+    now = timezone.localtime()
+
+    context = {
+        'appointments': appointments,
+        'selected_date': selected_date,
+        'prev_date': prev_date,
+        'next_date': next_date,
+        'now': now
+    }
+    return render(request, 'appointments/master_schedule.html', context)
+
+
+@master_required
+@require_POST
+def update_appointment_status_view(request, appointment_id):
+    appointment = get_object_or_404(
+        Appointment,
+        id=appointment_id,
+        master=request.user.master_profile,
+        status='booked'
+    )
+    selected_date = appointment.start_datetime.date()
+    if appointment.end_datetime > timezone.now():
+        messages.error(request, 'Нельзя изменить статус будущей записи.')
+        return redirect(f"{reverse('appointments:master_schedule')}?date={selected_date}")
+
+    new_status = request.POST.get('status')
+    if new_status in ['completed', 'no_show']:
+        appointment.status = new_status
+        appointment.save()
+        if new_status == 'completed':
+            messages.success(request, 'Запись отмечена как завершённая.')
+        elif new_status == 'no_show':
+            messages.warning(request, 'Запись отмечена как неявка.')
+    else:
+        messages.error(request, 'Неверный статус.')
+
+
+    return redirect(f"{reverse('appointments:master_schedule')}?date={selected_date}")

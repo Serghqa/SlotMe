@@ -77,7 +77,7 @@ class Appointment(AppointmentValidationMixin, models.Model):
 
     @property
     def is_past(self):
-        return self.start_datetime < timezone.localtime()
+        return self.start_datetime < timezone.now()
 
     @property
     def can_be_cancelled(self):

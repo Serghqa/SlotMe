@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Расписание — SlotMe{% endblock title %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Моё расписание</h2>
+    <div class="btn-group">
+        <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-outline-primary">&larr; {{ prev_date|date:"d.m" }}</a>
+        <span class="btn btn-primary disabled">{{ selected_date|date:"d.m.Y" }}</span>
+        <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-outline-primary">{{ next_date|date:"d.m" }} &rarr;</a>
+    </div>
+</div>
+
+{% if appointments %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Время</th>
+                    <th>Клиент</th>
+                    <th>Телефон</th>
+                    <th>Услуга</th>
+                    <th>Стоимость</th>
+                    <th>Статус</th> <!-- Добавлено поле Статус -->
+                    <th style="min-width: 180px;">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appointment in appointments %}
+                    <tr>
+                        <td>{{ appointment.start_datetime|date:"H:i" }} — {{ appointment.end_datetime|date:"H:i" }}</td>
+                        <td>{{ appointment.client.get_full_name|default:appointment.client.username }}</td>
+                        <td>{{ appointment.client.phone|default:"—" }}</td>
+                        <td>{{ appointment.service.name }}</td>
+                        <td>{{ appointment.service.price }}₽</td>
+
+                        <!-- Колонка со статусом в стиле клиентского шаблона -->
+                        <td>
+                            {% if appointment.status == 'booked' %}
+                                {% if appointment.end_datetime < now %}
+                                    <span class="badge bg-light text-dark border">Ожидает подтверждения</span>
+                                {% else %}
+                                    <span class="badge bg-primary">Забронирована</span>
+                                {% endif %}
+                            {% elif appointment.status == 'completed' %}
+                                <span class="badge bg-success">Завершена</span>
+                            {% elif appointment.status == 'no_show' %}
+                                <span class="badge bg-warning text-dark">Неявка</span>
+                            {% elif appointment.status == 'cancelled' %}
+                                <span class="badge bg-secondary">Отменена</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Колонка с действиями мастеров -->
+                        <td>
+                            <div class="d-flex gap-1">
+                                {% if appointment.status == 'booked' and appointment.end_datetime < now %}
+                                    <!-- Форма: Завершена -->
+                                    <form method="post" action="{% url 'appointments:update_status' appointment.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="completed">
+                                        <button type="submit" class="btn btn-sm btn-success">Завершена</button>
+                                    </form>
+                                    <!-- Форма: Неявка -->
+                                    <form method="post" action="{% url 'appointments:update_status' appointment.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="no_show">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">Неявка</button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <p>На этот день записей нет.</p>
+    </div>
+{% endif %}
+{% endblock content %}
