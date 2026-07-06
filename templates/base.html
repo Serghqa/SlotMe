@@ -23,25 +23,49 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'home' %}">Главная</a>
                     </li>
-                    <li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'services:services_list' %}">Услуги</a>
                     </li>
-                    <li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'masters:master_list' %}">Мастера</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
+                        {% if user.is_master %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'appointments:master_schedule' %}">Расписание</a>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'appointments:client_list' %}">Мои записи</a>
+                            </li>
+                        {% endif %}
+                        {% if user.is_admin %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    Админ-панель
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{% url 'appointments:admin_list' %}">Все записи</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'masters:admin_list' %}">Управление мастерами</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin:index' %}">Django Admin</a></li>
+                                </ul>
+                            </li>
+                        {% endif %}
+                        <!-- Профиль и Выход -->
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'users:profile' %}">{{ user.username }}</a>
+                            <a class="nav-link fw-bold" href="{% url 'users:profile' %}">{{ user.username }}</a>
                         </li>
                         <li class="nav-item">
                             <form method="post" action="{% url 'users:logout' %}" class="d-inline">
                                 {% csrf_token %}
-                                <button type="submit" class="nav-link btn btn-link">Выйти</button>
+                                <button type="submit" class="nav-link btn btn-link border-0 py-2">Выйти</button>
                             </form>
                         </li>
                     {% else %}
+                        <!-- Ссылки для гостей -->
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'users:register' %}">Зарегистрироваться</a>
                         </li>
@@ -69,7 +93,7 @@
 
     <footer class="container mt-5 mb-3 text-center text-muted">
         <hr>
-        <p>©; {% now "Y" %} SlotMe. Сервис записи к мастеру.</p>
+        <p>© {% now "Y" %} SlotMe. Сервис записи к мастеру.</p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
