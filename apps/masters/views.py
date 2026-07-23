@@ -31,15 +31,16 @@ def master_detail_view(request, master_id):
     service_id = request.GET.get('service_id')
 
     slots = []
-    selected_date = None
+    selected_date = timezone.localdate()
     selected_service = None
 
     if date_str:
         try:
-            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            selected_date = datetime.fromisoformat(date_str).date()
         except ValueError:
-            messages.error(request, 'Указан неверный формат даты!')
-            date_str = None
+            selected_date = timezone.localdate()
+    else:
+        date_str = selected_date.isoformat()
 
     if service_id:
         selected_service = get_object_or_404(services, id=service_id)
