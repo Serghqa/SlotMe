@@ -5,27 +5,34 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
-        <h2 class="mb-4">Личный кабинет</h2>
-
-        <div class="card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Личный кабинет</h2>
+        </div>
+        <div class="card shadow-sm mb-4">
             <div class="card-body">
-                <h5 class="card-title">{{ user.get_full_name|default:user.username }}</h5>
-                <p class="card-text">
-                    <strong>Email:</strong> {{ user.email|default:"Не указан" }}<br>
-                    <strong>Телефон:</strong> {{ user.phone|default:"Не указан" }}
-                </p>
+                <h4 class="card-title mb-3">{{ user.get_full_name|default:user.username }}</h4>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <span class="text-muted d-block small">Электронная почта:</span>
+                        <strong>{{ user.email|default:"Не указана" }}</strong>
+                    </li>
+                    <li class="mb-2">
+                        <span class="text-muted d-block small">Номер телефона:</span>
+                        <strong>{{ user.phone|default:"Не указан" }}</strong>
+                    </li>
+                </ul>
             </div>
         </div>
 
-        {% if user.is_master %}
-            <div class="mt-3">
-                <a href="{% url 'appointments:master_schedule' %}" class="btn btn-outline-primary">Моё расписание</a>
-            </div>
-        {% else %}
-            <div class="mt-3">
-                <a href="{% url 'appointments:client_list' %}" class="btn btn-outline-primary">Мои записи</a>
-            </div>
-        {% endif %}
+        <div class="d-flex gap-2 flex-wrap">
+            {% if user.is_master %}
+                <a href="{% url 'appointments:master_schedule' %}" class="btn btn-outline-primary">📅 Моё расписание</a>
+            {% else %}
+                <a href="{% url 'appointments:client_list' %}" class="btn btn-outline-primary">📝 Мои записи</a>
+            {% endif %}
+            <!-- Заготовка для будущей формы редактирования -->
+            <a href="#" class="btn btn-outline-secondary">Редактировать профиль</a>
+        </div>
     </div>
 </div>
 {% endblock content %}
