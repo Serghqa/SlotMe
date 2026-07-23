@@ -117,7 +117,7 @@ class UserWorkflowTestCase(TestCase):
         self.client.force_login(client_user)
 
         response = self.client.get(reverse('users:register'))
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse('users:profile'))
 
     def test_profile_view_access_control(self):
         """Тест вьюхи: аноним отправляется на логин, авторизованный успешно видит профиль"""

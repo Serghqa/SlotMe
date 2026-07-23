@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Услуги мастера {{ master.user.username }} — SlotMe{% endblock title %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'masters:admin_list' %}" class="btn btn-sm btn-outline-secondary">← Назад к мастерам</a>
+    <h2 class="mt-3">Услуги мастера: {{ master.user.get_full_name|default:master.user.username }}</h2>
+    <p class="text-muted">Отметьте галочками услуги, которые выполняет данный мастер.</p>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            {% if all_services %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+                    {% for service in all_services %}
+                        <div class="col">
+                            <div class="form-check p-3 border rounded h-100 bg-light-hover">
+                                <input class="form-check-input ms-0 me-2"
+                                       type="checkbox"
+                                       name="services"
+                                       value="{{ service.id }}"
+                                       id="service_{{ service.id }}"
+                                       {% if service in master.services.all %}checked{% endif %}>
+                                <label class="form-check-label d-block workflow-label" for="service_{{ service.id }}">
+                                    <strong>{{ service.name }}</strong>
+                                    {% if service.price %}
+                                        <span class="d-block text-muted small">{{ service.price }} ₽</span>
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-success px-4">Сохранить изменения</button>
+            {% else %}
+                <div class="alert alert-warning mb-0">
+                    В системе еще не создано ни одной услуги. Сначала создайте услуги в панели управления.
+                </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock content %}

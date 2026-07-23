@@ -6,9 +6,9 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Моё расписание</h2>
     <div class="btn-group">
-        <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-outline-primary">&larr; {{ prev_date|date:"d.m" }}</a>
+        <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-outline-primary">« {{ prev_date|date:"d.m" }}</a>
         <span class="btn btn-primary disabled">{{ selected_date|date:"d.m.Y" }}</span>
-        <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-outline-primary">{{ next_date|date:"d.m" }} &rarr;</a>
+        <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-outline-primary">{{ next_date|date:"d.m" }} »</a>
     </div>
 </div>
 
@@ -22,7 +22,7 @@
                     <th>Телефон</th>
                     <th>Услуга</th>
                     <th>Стоимость</th>
-                    <th>Статус</th> <!-- Добавлено поле Статус -->
+                    <th>Статус</th>
                     <th style="min-width: 180px;">Действия</th>
                 </tr>
             </thead>
@@ -39,35 +39,47 @@
                         <td>
                             {% if appointment.status == 'booked' %}
                                 {% if appointment.end_datetime < now %}
-                                    <span class="badge bg-light text-dark border">Ожидает подтверждения</span>
+                                    <span class="badge bg-secondary">Ожидает подтверждения</span>
                                 {% else %}
                                     <span class="badge bg-primary">Забронирована</span>
                                 {% endif %}
                             {% elif appointment.status == 'completed' %}
                                 <span class="badge bg-success">Завершена</span>
                             {% elif appointment.status == 'no_show' %}
-                                <span class="badge bg-warning text-dark">Неявка</span>
+                                <span class="badge bg-warning">Неявка</span>
                             {% elif appointment.status == 'cancelled' %}
-                                <span class="badge bg-secondary">Отменена</span>
+                                <span class="badge bg-danger">Отменена</span>
                             {% endif %}
                         </td>
 
                         <!-- Колонка с действиями мастеров -->
                         <td>
                             <div class="d-flex gap-1">
-                                {% if appointment.status == 'booked' and appointment.end_datetime < now %}
-                                    <!-- Форма: Завершена -->
-                                    <form method="post" action="{% url 'appointments:update_status' appointment.id %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="status" value="completed">
-                                        <button type="submit" class="btn btn-sm btn-success">Завершена</button>
-                                    </form>
-                                    <!-- Форма: Неявка -->
-                                    <form method="post" action="{% url 'appointments:update_status' appointment.id %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="status" value="no_show">
-                                        <button type="submit" class="btn btn-sm btn-outline-warning">Неявка</button>
-                                    </form>
+                                {% if appointment.status == 'booked' %}
+                                    {% if appointment.end_datetime < now %}
+                                        <form method="post" action="{% url 'appointments:update_status' appointment.id %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="status" value="completed">
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Завершить</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if appointment.start_datetime < now %}
+                                        <form method="post" action="{% url 'appointments:update_status' appointment.id %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="status" value="no_show">
+                                            <button type="submit" class="btn btn-sm btn-outline-warning">Неявка</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if appointment.can_be_cancelled %}
+                                        {% comment %} <form method="post" action="{% url 'appointments:master_cancel' appointment.id %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="status" value="cancelled">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">Отменить</button>
+                                        </form> {% endcomment %}
+                                        <a href="{% url 'appointments:master_cancel' appointment.id %}" class="btn btn-sm btn-outline-danger">
+                                            Отменить
+                                        </a>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-muted small">—</span>
                                 {% endif %}

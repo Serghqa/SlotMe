@@ -10,6 +10,8 @@ urlpatterns = [
         template_name='registration/login.html',
         redirect_authenticated_user=True
     ), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
+    path('logout/', auth_views.LogoutView.as_view(
+        next_page='home'
+    ), name='logout'),
     path('profile/', views.profile_view, name='profile'),
 ]

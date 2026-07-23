@@ -27,7 +27,13 @@
             </div>
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-danger">Подтвердить отмену</button>
-                <a href="{% url 'appointments:client_list' %}" class="btn btn-outline-secondary">Назад</a>
+                {% if role == "client" %}
+                    <a href="{% url 'appointments:client_list' %}" class="btn btn-outline-secondary">Назад</a>
+                {% elif role == "admin" %}
+                    <a href="{% url 'appointments:admin_list' %}{% if query_string %}?{{ query_string }}{% endif %}" class="btn btn-outline-secondary">Назад</a>
+                {% elif role == "master" %}
+                    <a href="{% url 'appointments:master_schedule' %}?date={{ appointment.start_datetime|date:'Y-m-d' }}" class="btn btn-outline-secondary">Назад</a>
+                {% endif %}
             </div>
         </form>
     </div>

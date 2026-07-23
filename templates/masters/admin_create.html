@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить мастера — SlotMe{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <h2 class="mb-4">Добавить мастера</h2>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label for="username" class="form-label">Логин *</label>
+                <input type="text" name="username" id="username" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Услуги</label>
+                <div class="row">
+                    {% for service in services %}
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="services" value="{{ service.id }}" id="service_{{ service.id }}">
+                                <label class="form-check-label" for="service_{{ service.id }}">
+                                    {{ service.name }} ({{ service.price }}₽)
+                                </label>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if not services %}
+                    <p class="text-muted">Нет доступных услуг. <a href="{% url 'admin:services_service_add' %}">Создать услугу</a></p>
+                {% endif %}
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Создать мастера</button>
+                <a href="{% url 'masters:admin_list' %}" class="btn btn-outline-secondary">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

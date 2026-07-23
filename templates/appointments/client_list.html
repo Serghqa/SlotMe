@@ -42,14 +42,14 @@
                         <td>
                             {% if appointment.status == 'booked' %}
                                 {% if appointment.is_past %}
-                                    <span class="badge bg-light text-dark border">Завершена (ожидает подтверждения)</span>
+                                    <span class="badge bg-secondary">Завершена (ожидает подтверждения)</span>
                                 {% else %}
                                     <span class="badge bg-primary">Забронирована</span>
                                 {% endif %}
                             {% elif appointment.status == 'completed' %}
                                 <span class="badge bg-success">Завершена</span>
                             {% elif appointment.status == 'cancelled' %}
-                                <span class="badge bg-secondary">Отменена</span>
+                                <span class="badge bg-danger">Отменена</span>
                             {% elif appointment.status == 'no_show' %}
                                 <span class="badge bg-warning">Неявка</span>
                             {% endif %}
@@ -69,16 +69,22 @@
 
         <!-- 2. БЛОК ПАГИНАЦИИ BOOTSTRAP -->
     {% if appointments.has_other_pages %}
-        <nav aria-label="Навигация по записямы">
+        <nav aria-label="Навигация по записям">
             <ul class="pagination justify-content-center">
 
                 <!-- Кнопка "Назад" -->
                 {% if appointments.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?tab={{ current_tab }}&page={{ appointments.previous_page_number }}">&laquo;</a>
+                        <a class="page-link" href="?tab={{ current_tab }}&page={{ appointments.previous_page_number }}" aria-label="Назад">
+                            <i class="bi bi-chevron-left">«</i>
+                        </a>
                     </li>
                 {% else %}
-                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">
+                            <i class="bi bi-chevron-left">«</i>
+                        </span>
+                    </li>
                 {% endif %}
 
                 <!-- Номера страниц -->
@@ -95,10 +101,16 @@
                 <!-- Кнопка "Вперед" -->
                 {% if appointments.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?tab={{ current_tab }}&page={{ appointments.next_page_number }}">&raquo;</a>
+                        <a class="page-link" href="?tab={{ current_tab }}&page={{ appointments.next_page_number }}" aria-label="Вперед">
+                            <i class="bi bi-chevron-right">»</i>
+                        </a>
                     </li>
                 {% else %}
-                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">
+                            <i class="bi bi-chevron-right">»</i>
+                        </span>
+                    </li>
                 {% endif %}
 
             </ul>
