@@ -63,7 +63,6 @@ def master_detail_view(request, master_id):
     return render(request, 'masters/master_detail.html', context)
 
 
-@login_required
 @admin_required
 def admin_master_list_view(request):
     masters = Master.objects.prefetch_related('services').order_by('user__last_name')
