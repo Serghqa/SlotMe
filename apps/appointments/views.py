@@ -210,28 +210,25 @@ def master_schedule_view(request):
     selected_date = timezone.localdate()
     if date_str:
         try:
-            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            selected_date = datetime.fromisoformat(date_str).date()
         except ValueError:
-            pass
+            selected_date = timezone.localdate()
+    else:
+        date_str = selected_date.isoformat()
 
     master = request.user.master_profile
 
     appointments = Appointment.objects.filter(
         master=master,
         start_datetime__date=selected_date,
-        # status='booked'
     ).select_related('client', 'service').order_by('start_datetime')
 
-    prev_date = selected_date - timedelta(days=1)
-    next_date = selected_date + timedelta(days=1)
     now = timezone.localtime()
 
     context = {
         'appointments': appointments,
-        'selected_date': selected_date,
-        'prev_date': prev_date,
-        'next_date': next_date,
-        'now': now
+        'now': now,
+        'raw_date_str': date_str,
     }
     return render(request, 'appointments/master_schedule.html', context)
 
