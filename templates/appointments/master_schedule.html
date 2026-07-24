@@ -3,23 +3,24 @@
 {% block title %}Расписание — SlotMe{% endblock title %}
 
 {% block content %}
-<div class="row align-items-center mb-4 g-3">
-    <div class="col-md-4">
+<div class="row align-items-md-end align-items-center mb-4 g-3">
+    <div class="col-10 col-md">
         <h2 class="mb-0">Моё расписание</h2>
     </div>
-    <div class="col-md-4">
-        <form method="get" action="" id="date-filter-form" class="row g-2 align-items-end">
-            <div class="col-8 col-md-12">
-                <label for="date" class="form-label d-none d-md-block small mb-1">Выберите дату:</label>
-                <input type="date" name="date" id="date" class="form-control"
-                    value="{{ raw_date_str|default:'' }}"
-                    min="{{ today|date:'Y-m-d' }}"
-                    onchange="this.form.submit()">
-            </div>
-            <div class="col-4 d-md-none">
-                <button type="submit" class="btn btn-secondary w-100">Показать</button>
-            </div>
+    <div class="col-12 col-md-auto">
+        <form method="get" action="" id="date-filter-form">
+            <label for="date" class="form-label d-none d-md-block small mb-1">Выберите дату:</label>
+            <input type="date" name="date" id="date" class="form-control"
+                value="{{ raw_date_str|default:'' }}"
+                onchange="this.form.submit()">
         </form>
+    </div>
+    <div class="col-12 col-md-auto d-flex justify-content-md-end justify-content-center">
+        <div class="btn-group">
+            <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-outline-primary">« {{ prev_date|date:"d.m" }}</a>
+            <span class="btn btn-primary disabled text-white fw-bold">{{ selected_date|date:"d.m.Y" }}</span>
+            <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-outline-primary">{{ next_date|date:"d.m" }} »</a>
+        </div>
     </div>
 </div>
 
@@ -82,11 +83,6 @@
                                         </form>
                                     {% endif %}
                                     {% if appointment.can_be_cancelled %}
-                                        {% comment %} <form method="post" action="{% url 'appointments:master_cancel' appointment.id %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="status" value="cancelled">
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary">Отменить</button>
-                                        </form> {% endcomment %}
                                         <a href="{% url 'appointments:master_cancel' appointment.id %}" class="btn btn-sm btn-outline-danger">
                                             Отменить
                                         </a>
@@ -102,8 +98,8 @@
         </table>
     </div>
 {% else %}
-    <div class="alert alert-info">
-        <p>На этот день записей нет.</p>
+    <div class="alert alert-info shadow-sm">
+        <p class="mb-0">На этот день записей нет.</p>
     </div>
 {% endif %}
 {% endblock content %}

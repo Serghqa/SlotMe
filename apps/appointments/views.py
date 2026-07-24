@@ -213,8 +213,13 @@ def master_schedule_view(request):
             selected_date = datetime.fromisoformat(date_str).date()
         except ValueError:
             selected_date = timezone.localdate()
+            date_str = selected_date.isoformat()
     else:
         date_str = selected_date.isoformat()
+
+    # --- РАСЧЕТ ДАННЫХ ДЛЯ КНОПОК ---
+    prev_date = selected_date - timedelta(days=1)
+    next_date = selected_date + timedelta(days=1)
 
     master = request.user.master_profile
 
@@ -228,6 +233,9 @@ def master_schedule_view(request):
     context = {
         'appointments': appointments,
         'now': now,
+        'selected_date': selected_date,
+        'prev_date': prev_date,
+        'next_date': next_date,
         'raw_date_str': date_str,
     }
     return render(request, 'appointments/master_schedule.html', context)
