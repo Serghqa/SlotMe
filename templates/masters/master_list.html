@@ -10,69 +10,69 @@
 {% endblock title %}
 
 {% block content %}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        {% if selected_service %}
-            <h2>Мастера по услуге: <span class="text-primary">{{ selected_service.name }}</span></h2>
-            <a href="{% url 'services:services_list' %}" class="btn btn-outline-secondary btn-sm">
-                « Назад к услугам
-            </a>
-        {% else %}
-            <h2>Наши мастера</h2>
-        {% endif %}
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    {% if selected_service %}
+        <h2>Мастера по услуге: <span class="text-primary">{{ selected_service.name }}</span></h2>
+        <a href="{% url 'services:services_list' %}" class="btn btn-outline-secondary btn-sm">
+            « Назад к услугам
+        </a>
+    {% else %}
+        <h2>Наши мастера</h2>
+    {% endif %}
+</div>
 
-    {% if masters %}
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-            {% for master in masters %}
-                <div class="col">
-                    <div class="card h-100 shadow-sm">
-                        <div class="master-card-img-wrapper">
-                            {% if master.photo %}
-                                <img src="{{ master.photo.url }}"
-                                    class="master-card-img"
-                                    alt="{{ master.user.get_full_name }}">
-                            {% else %}
-                                <img src="{% static 'img/no-photo.png' %}"
-                                    class="master-card-img master-card-img-placeholder"
-                                    alt="Нет фото">
-                            {% endif %}
+{% if masters %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for master in masters %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="master-card-img-wrapper">
+                        {% if master.photo %}
+                            <img src="{{ master.photo.url }}"
+                                class="master-card-img"
+                                alt="{{ master.user.get_full_name }}">
+                        {% else %}
+                            <img src="{% static 'img/no-photo.png' %}"
+                                class="master-card-img master-card-img-placeholder"
+                                alt="Нет фото">
+                        {% endif %}
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title fw-bold">{{ master.user.get_full_name|default:master.user.username }}</h5>
+                        {% if master.bio %}
+                            <p class="card-text text-muted small flex-grow-1">
+                                {{ master.bio|truncatewords:15 }}
+                            </p>
+                        {% else %}
+                            <div class="flex-grow-1"></div>
+                        {% endif %}
+
+                        <div class="mt-2 mb-3">
+                            <small class="text-muted d-block mb-1">Услуги мастера:</small>
+                            {% for service in master.services.all %}
+                                <span class="badge {% if selected_service and selected_service.id == service.id %}bg-primary{% else %}bg-secondary{% endif %} me-1 mb-1">
+                                    {{ service.name }}
+                                </span>
+                            {% endfor %}
                         </div>
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title fw-bold">{{ master.user.get_full_name|default:master.user.username }}</h5>
-                            {% if master.bio %}
-                                <p class="card-text text-muted small flex-grow-1">
-                                    {{ master.bio|truncatewords:15 }}
-                                </p>
-                            {% else %}
-                                <div class="flex-grow-1"></div>
-                            {% endif %}
 
-                            <div class="mt-2 mb-3">
-                                <small class="text-muted d-block mb-1">Услуги мастера:</small>
-                                {% for service in master.services.all %}
-                                    <span class="badge {% if selected_service and selected_service.id == service.id %}bg-primary{% else %}bg-secondary{% endif %} me-1 mb-1">
-                                        {{ service.name }}
-                                    </span>
-                                {% endfor %}
-                            </div>
-
-                            <div class="mt-auto pt-3 border-top">
-                                <a href="{% url 'masters:master_detail' master.id %}{% if selected_service %}?service_id={{ selected_service.id }}{% endif %}" class="btn btn-primary w-100">
-                                    Записаться
-                                </a>
-                            </div>
+                        <div class="mt-auto pt-3 border-top">
+                            <a href="{% url 'masters:master_detail' master.id %}{% if selected_service %}?service_id={{ selected_service.id }}{% endif %}" class="btn btn-primary w-100">
+                                Записаться
+                            </a>
                         </div>
                     </div>
                 </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="alert alert-info">
-            {% if selected_service %}
-                К сожалению, на услугу «{{ selected_service.name }}» пока нет доступных мастеров.
-            {% else %}
-                Мастеров пока нет.
-            {% endif %}
-        </div>
-    {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        {% if selected_service %}
+            К сожалению, на услугу «{{ selected_service.name }}» пока нет доступных мастеров.
+        {% else %}
+            Мастеров пока нет.
+        {% endif %}
+    </div>
+{% endif %}
 {% endblock content %}
