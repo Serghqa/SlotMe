@@ -3,35 +3,48 @@
 {% block title %}Вход — SlotMe{% endblock title %}
 
 {% block content %}
-<div class="row justify-content-center">
+<div class="row justify-content-center my-5">
     <div class="col-md-6 col-lg-4">
-        <h2 class="mb-4 text-center">Вход</h2>
+        <div class="card shadow-sm p-4">
+            <h2 class="mb-4 text-center fw-bold">Вход</h2>
 
-        <form method="post" novalidate>
-            {% csrf_token %}
+            <form method="post" novalidate>
+                {% csrf_token %}
 
-            <div class="mb-3">
-                <label class="form-label">Логин</label>
-                <input type="text" name="username" class="form-control" required>
-            </div>
+                {% if form.non_field_errors or form.errors %}
+                    <div class="alert alert-danger small py-2 text-center" role="alert">
+                        Неверный логин или пароль. Попробуйте снова.
+                    </div>
+                {% endif %}
 
-            <div class="mb-3">
-                <label class="form-label">Пароль</label>
-                <input type="password" name="password" class="form-control" required>
-            </div>
-
-            {% if form.errors %}
-                <div class="alert alert-danger">
-                    Неверный логин или пароль. Попробуйте снова.
+                <div class="mb-3">
+                    <label for="id_username" class="form-label small fw-bold">Логин</label>
+                    <input type="text"
+                           name="username"
+                           id="id_username"
+                           class="form-control"
+                           value="{{ form.username.value|default:'' }}"
+                           autocomplete="username"
+                           required>
                 </div>
-            {% endif %}
 
-            <button type="submit" class="btn btn-primary w-100">Войти</button>
-        </form>
+                <div class="mb-4">
+                    <label for="id_password" class="form-label small fw-bold">Пароль</label>
+                    <input type="password"
+                           name="password"
+                           id="id_password"
+                           class="form-control"
+                           autocomplete="current-password"
+                           required>
+                </div>
 
-        <p class="mt-3 text-center">
-            Нет аккаунта? <a href="{% url 'users:register' %}">Зарегистрироваться</a>
-        </p>
+                <button type="submit" class="btn btn-primary w-100 py-2">Войти</button>
+            </form>
+
+            <div class="mt-4 text-center small text-muted">
+                Нет аккаунта? <a href="{% url 'users:register' %}" class="text-decoration-none">Зарегистрироваться</a>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock content %}
