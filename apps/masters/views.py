@@ -19,6 +19,21 @@ def master_list_view(request):
     return render(request, 'masters/master_list.html', {'masters': masters})
 
 
+def master_service_list_view(request, service_id):
+    service = get_object_or_404(
+        Service.objects.prefetch_related('masters'),
+        id=service_id,
+        is_active=True
+    )
+    masters = service.masters.filter(is_active=True).prefetch_related('services')
+    context = {
+        'masters': masters,
+        'selected_service': service,
+    }
+
+    return render(request, 'masters/master_list.html', context)
+
+
 def master_detail_view(request, master_id):
     master = get_object_or_404(
         Master.objects.prefetch_related('services'),

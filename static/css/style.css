@@ -2,3 +2,30 @@
 body {
     background-color: #f8f9fa;
 }
+
+/* Контейнер для фотографии мастера в карточке */
+.master-card-img-wrapper {
+    height: 250px;
+    overflow: hidden;
+    position: relative;
+    background-color: #f8f9fa; /* Аналог bg-light */
+    border-top-left-radius: var(--bs-card-inner-border-radius);
+    border-top-right-radius: var(--bs-card-inner-border-radius);
+}
+
+/* Изображение мастера (заполнение без искажений) */
+.master-card-img {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* Модификатор для картинки-заглушки */
+.master-card-img-placeholder {
+    object-fit: contain;
+    padding: 2rem;
+}
