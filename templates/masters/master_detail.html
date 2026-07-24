@@ -6,11 +6,13 @@
 {% block content %}
 <div class="row">
     <div class="col-md-4">
-        {% if master.photo %}
-            <img src="{{ master.photo.url }}" class="img-fluid rounded mb-3" alt="{{ master.user.get_full_name }}">
-        {% else %}
-            <img src="{% static 'img/no-photo.png' %}" class="img-fluid rounded mb-3" alt="Нет фото">
-        {% endif %}
+        <div class="master-card-img-wrapper rounded mb-3">
+            {% if master.photo %}
+                <img src="{{ master.photo.url }}" class="master-card-img" alt="{{ master.user.get_full_name }}">
+            {% else %}
+                <img src="{% static 'img/no-photo.png' %}" class="master-card-img master-card-img-placeholder" alt="Нет фото">
+            {% endif %}
+        </div>
     </div>
     <div class="col-md-8">
         <h2>{{ master.user.get_full_name|default:master.user.username }}</h2>
@@ -21,8 +23,8 @@
         <!-- Форма выбора -->
         <form method="get" class="row g-3 mb-4" id="booking-filter-form">
             <div class="col-md-5">
-                <label class="form-label">Услуга</label>
-                <select name="service_id" class="form-select" onchange="this.form.submit()">
+                <label for="service_id" class="form-label small fw-bold">Услуга</label>
+                <select name="service_id" id="service_id" class="form-select" onchange="this.form.submit()">
                     <option value="">-- Выберите услугу --</option>
                     {% for service in services %}
                         <option value="{{ service.id }}"
@@ -33,7 +35,7 @@
                 </select>
             </div>
             <div class="col-md-5">
-                <label class="form-label">Дата</label>
+                <label for="date" class="form-label small fw-bold">Дата</label>
                 <input type="date" name="date" id="date" class="form-control"
                     value="{{ raw_date_str|default:'' }}"
                     min="{{ today|date:'Y-m-d' }}"
@@ -45,17 +47,20 @@
         </form>
         <!-- Свободные слоты -->
         {% if selected_date and selected_service %}
-            <h5>Свободное время на {{ selected_date|date:"d.m.Y" }}</h5>
-            <p class="text-muted">{{ selected_service.name }} — {{ selected_service.price }}₽</p>
+            <h5 class="mb-2">Свободное время на {{ selected_date|date:"d.m.Y" }}</h5>
+            <p class="text-muted small mb-3">
+                {{ selected_service.name }} — <span class="fw-bold text-primary">{{ selected_service.price }}₽</span>
+            </p>
+
             {% if slots %}
-                <div class="d-grid gap-2 d-md-flex flex-wrap">
+                <div class="d-flex flex-wrap gap-2">
                     {% for slot in slots %}
                         <form method="post" action="{% url 'appointments:book' master.id %}" class="d-inline">
                             {% csrf_token %}
                             <input type="hidden" name="service_id" value="{{ selected_service.id }}">
                             <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
                             <input type="hidden" name="time" value="{{ slot|time:'H:i' }}">
-                            <button type="submit" class="btn btn-outline-primary m-1">
+                            <button type="submit" class="btn btn-outline-primary px-3 py-2">
                                 {{ slot|time:'H:i' }}
                             </button>
                         </form>
@@ -66,7 +71,7 @@
             {% endif %}
         {% else %}
             <!-- Показываем подсказку, если не выбран один или оба компонента -->
-            <p class="text-muted">
+            <p class="text-muted bg-light p-3 rounded small">
                 {% if not selected_service and not selected_date %}
                     Выберите услугу и дату, чтобы увидеть свободное время.
                 {% elif not selected_service %}
