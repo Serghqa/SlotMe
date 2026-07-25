@@ -49,11 +49,13 @@
 
                         <div class="mt-2 mb-3">
                             <small class="text-muted d-block mb-1">Услуги мастера:</small>
-                            {% for service in master.services.all %}
-                                <span class="badge {% if selected_service and selected_service.id == service.id %}bg-primary{% else %}bg-secondary{% endif %} me-1 mb-1">
-                                    {{ service.name }}
-                                </span>
-                            {% endfor %}
+                            <div class="d-flex flex-wrap">
+                                {% for service in master.services.all %}
+                                    <span class="badge {% if selected_service and selected_service.id == service.id %}bg-primary{% else %}bg-secondary{% endif %} me-1 mb-1 text-wrap text-start">
+                                        {{ service.name }}
+                                    </span>
+                                {% endfor %}
+                            </div>
                         </div>
 
                         <div class="mt-auto pt-3 border-top">

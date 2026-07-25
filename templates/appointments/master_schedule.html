@@ -41,9 +41,9 @@
             <tbody>
                 {% for appointment in appointments %}
                     <tr>
-                        <td>{{ appointment.start_datetime|date:"H:i" }} — {{ appointment.end_datetime|date:"H:i" }}</td>
+                        <td class="text-nowrap">{{ appointment.start_datetime|date:"H:i" }} — {{ appointment.end_datetime|date:"H:i" }}</td>
                         <td>{{ appointment.client.get_full_name|default:appointment.client.username }}</td>
-                        <td>{{ appointment.client.phone|default:"—" }}</td>
+                        <td class="text-nowrap">{{ appointment.client.phone|default:"—" }}</td>
                         <td>{{ appointment.service.name }}</td>
                         <td>{{ appointment.service.price }}₽</td>
 
