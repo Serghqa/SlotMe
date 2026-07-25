@@ -307,18 +307,23 @@ def admin_appointments_view(request):
     date_str = request.GET.get('date')
     master_id = request.GET.get('master')
     status = request.GET.get('status')
+
     now = timezone.localtime()
+
+    if date_str:
+        try:
+            filter_date = datetime.fromisoformat(date_str).date()
+        except ValueError:
+            filter_date = timezone.localdate()
+            date_str = ""
+    else:
+        filter_date = timezone.localdate()
 
     appointments = Appointment.objects.select_related(
         'client', 'master__user', 'service'
     ).order_by('-start_datetime')
 
-    if date_str:
-        try:
-            filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            appointments = appointments.filter(start_datetime__date=filter_date)
-        except ValueError:
-            date_str = ''
+    appointments = appointments.filter(start_datetime__date=filter_date)
 
     if master_id and master_id.isdigit():
         appointments = appointments.filter(master_id=master_id)
