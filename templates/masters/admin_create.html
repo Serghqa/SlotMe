@@ -3,42 +3,74 @@
 {% block title %}Добавить мастера — SlotMe{% endblock title %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-        <h2 class="mb-4">Добавить мастера</h2>
+<div class="row justify-content-center my-4">
+    <div class="col-md-10 col-lg-8">
+        <div class="card shadow-sm p-4">
+            <h2 class="mb-4 fw-bold">Добавить мастера</h2>
 
-        <form method="post">
-            {% csrf_token %}
+            <form method="post" novalidate>
+                {% csrf_token %}
 
-            <div class="mb-3">
-                <label for="username" class="form-label">Логин *</label>
-                <input type="text" name="username" id="username" class="form-control" required>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Услуги</label>
-                <div class="row">
-                    {% for service in services %}
-                        <div class="col-md-6">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="services" value="{{ service.id }}" id="service_{{ service.id }}">
-                                <label class="form-check-label" for="service_{{ service.id }}">
-                                    {{ service.name }} ({{ service.price }}₽)
-                                </label>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-                {% if not services %}
-                    <p class="text-muted">Нет доступных услуг. <a href="{% url 'admin:services_service_add' %}">Создать услугу</a></p>
+                {% if form.errors or form.non_field_errors %}
+                    <div class="alert alert-danger small py-2" role="alert">
+                        {% if form.non_field_errors %}
+                            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                        {% else %}
+                            Пожалуйста, исправьте ошибки в полях ниже.
+                        {% endif %}
+                    </div>
                 {% endif %}
-            </div>
 
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Создать мастера</button>
-                <a href="{% url 'masters:admin_list' %}" class="btn btn-outline-secondary">Отмена</a>
-            </div>
-        </form>
+                <div class="mb-4">
+                    <label for="username" class="form-label small fw-bold">Логин пользователя *</label>
+                    <input type="text"
+                        name="username"
+                        id="username"
+                        class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                        value="{{ request.POST.username|default:'' }}"
+                        required>
+                    {% if form.username.errors %}
+                        <div class="invalid-feedback fw-semibold">
+                            {% for error in form.username.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold mb-2">Закрепить услуги за мастером</label>
+                    {% if services %}
+                        <div class="row row-cols-1 row-cols-sm-2 g-2">
+                            {% for service in services %}
+                                <div class="col">
+                                    <div class="form-check p-2 px-3 border rounded h-100 master-service-item d-flex align-items-center">
+                                        <input class="form-check-input mt-0"
+                                            type="checkbox"
+                                            name="services"
+                                            value="{{ service.id }}"
+                                            id="service_{{ service.id }}"
+                                            {% if service.id|stringformat:"s" in request.POST.getlist.services %}checked{% endif %}>
+                                        <label class="form-check-label ps-2 text-wrap small" for="service_{{ service.id }}">
+                                            <span class="fw-semibold text-dark">{{ service.name }}</span>
+                                            <span class="text-muted d-block small">{{ service.price }} ₽</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0 small py-2" role="alert">
+                            В системе еще не создано ни одной услуги.
+                            {% comment %} <a href="{% url '#' %}" class="alert-link text-decoration-none">Создать услугу</a> {% endcomment %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap mt-4 pt-2 border-top">
+                    <button type="submit" class="btn btn-primary px-4">Создать мастера</button>
+                    <a href="{% url 'masters:admin_list' %}" class="btn btn-outline-secondary px-4">Отмена</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock content %}
