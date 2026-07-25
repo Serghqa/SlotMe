@@ -3,16 +3,16 @@
 {% block title %}Управление записями — SlotMe{% endblock title %}
 
 {% block content %}
-<h2 class="mb-4">Все записи</h2>
+<h2 class="mb-4 fw-bold">Все записи</h2>
 
 <!-- Фильтры -->
-<form method="get" class="row g-3 mb-4">
-    <div class="col-md-3">
-        <label for="date" class="form-label">Дата</label>
+<form method="get" class="row g-3 mb-4 align-items-md-end">
+    <div class="col-sm-6 col-md-3">
+        <label for="date" class="form-label small fw-bold">Дата</label>
         <input type="date" name="date" id="date" class="form-control" value="{{ selected_date }}">
     </div>
-    <div class="col-md-3">
-        <label for="master" class="form-label">Мастер</label>
+    <div class="col-sm-6 col-md-3">
+        <label for="master" class="form-label small fw-bold">Мастер</label>
         <select name="master" id="master" class="form-select">
             <option value="">Все мастера</option>
             {% for master in masters %}
@@ -22,8 +22,8 @@
             {% endfor %}
         </select>
     </div>
-    <div class="col-md-3">
-        <label for="status" class="form-label">Статус</label>
+    <div class="col-sm-6 col-md-3">
+        <label for="status" class="form-label small fw-bold">Статус</label>
         <select name="status" id="status" class="form-select">
             <option value="">Все статусы</option>
             {% for value, label in status_choices %}
@@ -31,18 +31,23 @@
             {% endfor %}
         </select>
     </div>
-    <div class="col-md-3 d-flex align-items-end">
-        <button type="submit" class="btn btn-primary w-100">Фильтровать</button>
+    <div class="col-sm-6 col-md-3">
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">Применить</button>
+            <a href="{% url 'appointments:admin_list' %}" class="btn btn-outline-secondary" title="Сбросить фильтры">
+                ✕
+            </a>
+        </div>
     </div>
 </form>
 
 <!-- Таблица -->
 {% if appointments %}
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead>
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
                 <tr>
-                    <th>ID</th>
+                    <th style="width: 70px;">ID</th>
                     <th>Дата и время</th>
                     <th>Клиент</th>
                     <th>Мастер</th>
@@ -55,12 +60,12 @@
             <tbody>
                 {% for appointment in appointments %}
                     <tr>
-                        <td>{{ appointment.id }}</td>
+                        <td class="text-muted">#{{ appointment.id }}</td>
                         <td>{{ appointment.start_datetime|date:"d.m.Y H:i" }}</td>
-                        <td>{{ appointment.client.get_full_name|default:appointment.client.username }}</td>
+                        <td class="fw-semibold">{{ appointment.client.get_full_name|default:appointment.client.username }}</td>
                         <td>{{ appointment.master.user.get_full_name|default:appointment.master.user.username }}</td>
                         <td>{{ appointment.service.name|default:"—" }}</td>
-                        <td>{{ appointment.service.price|default:"—" }}₽</td>
+                        <td class="fw-bold text-primary">{{ appointment.service.price|default:"—" }}₽</td>
                         <td>
                             {% if appointment.status == 'booked' %}
                                 <span class="badge bg-primary">Забронирована</span>
@@ -73,31 +78,33 @@
                             {% endif %}
                         </td>
                         <td>
-                                <div class="d-flex gap-1">
-                                    {% if appointment.status == 'booked' %}
-                                        {% if appointment.end_datetime < now %}
-                                            <form method="post" action="{% url 'appointments:admin_update_status' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
-                                                onsubmit="return confirm('Изменить статус записи #{{ appointment.id }}?')">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="status" value="completed">
-                                                <button type="submit" class="btn btn-sm btn-outline-success">Завершить</button>
-                                            </form>
-                                        {% endif %}
-                                        {% if appointment.start_datetime < now %}
-                                            <form method="post" action="{% url 'appointments:admin_update_status' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
-                                                onsubmit="return confirm('Изменить статус записи #{{ appointment.id }}?')">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="status" value="no_show">
-                                                <button type="submit" class="btn btn-sm btn-outline-warning">Неявка</button>
-                                            </form>
-                                        {% endif %}
-                                        {% if appointment.can_be_cancelled %}
-                                            <a href="{% url 'appointments:admin_cancel' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-sm btn-outline-danger">
-                                                Отменить
-                                            </a>
-                                        {% endif %}
+                            <div class="d-flex gap-1">
+                                {% if appointment.status == 'booked' %}
+                                    {% if appointment.end_datetime < now %}
+                                        <form method="post" action="{% url 'appointments:admin_update_status' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+                                            onsubmit="return confirm('Изменить статус записи #{{ appointment.id }} на «Завершена»?')">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="status" value="completed">
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Завершить</button>
+                                        </form>
                                     {% endif %}
-                                </div>
+                                    {% if appointment.start_datetime < now %}
+                                        <form method="post" action="{% url 'appointments:admin_update_status' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+                                            onsubmit="return confirm('Изменить статус записи #{{ appointment.id }} на «Неявка»?')">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="status" value="no_show">
+                                            <button type="submit" class="btn btn-sm btn-outline-warning">Неявка</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if appointment.can_be_cancelled %}
+                                        <a href="{% url 'appointments:admin_cancel' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-sm btn-outline-danger">
+                                            Отменить
+                                        </a>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}
@@ -105,6 +112,6 @@
         </table>
     </div>
 {% else %}
-    <div class="alert alert-info">Записей не найдено.</div>
+    <div class="alert alert-info shadow-sm mb-0">Записей не найдено.</div>
 {% endif %}
 {% endblock content %}
