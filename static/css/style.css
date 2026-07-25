@@ -29,3 +29,23 @@ body {
     object-fit: contain;
     padding: 2rem;
 }
+
+/* Интерактивный контейнер услуги для мастера */
+.master-service-item {
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    background-color: #ffffff;
+}
+
+/* Эффект при наведении */
+.master-service-item:hover {
+    background-color: #f8f9fa; /* Легкий серый фон */
+    border-color: #dee2e6 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Легкая тень */
+}
+
+/* Стилизация чекбокса при выборе */
+.master-service-item:has(.form-check-input:checked) {
+    background-color: #ebf5ff; /* Нежно-синий оттенок для выбранных услуг */
+    border-color: #b4dbff !important;
+}
