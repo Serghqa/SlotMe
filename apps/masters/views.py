@@ -1,7 +1,7 @@
 from django.apps import apps
 from apps.core.decorators import admin_required
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.utils import timezone
@@ -80,7 +80,10 @@ def master_detail_view(request, master_id):
 
 @admin_required
 def admin_master_list_view(request):
-    masters = Master.objects.prefetch_related('services').order_by('user__last_name')
+    masters = Master.objects.prefetch_related('services')\
+        .order_by('user__last_name')\
+            .annotate(services_count=Count('services'))\
+                .order_by('user__last_name', 'user__first_name')
     return render(request, 'masters/admin_list.html', {'masters': masters})
 
 

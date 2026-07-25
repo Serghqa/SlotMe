@@ -35,7 +35,7 @@
                         <td>
                             {% if master.is_active %}
                                 <a href="{% url 'masters:admin_services' master.id %}" class="btn btn-sm btn-outline-primary">
-                                    ⚙️ Изменить ({{ master.services.count }})
+                                    ⚙️ Изменить ({{ master.services_count|default:"master.services.count" }})
                                 </a>
                             {% else %}
                                 <span class="text-muted small">--</span>
