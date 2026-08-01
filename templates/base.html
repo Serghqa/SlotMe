@@ -36,7 +36,8 @@
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'appointments:master_schedule' %}">Расписание</a>
                             </li>
-                        {% else %}
+                        {% endif %}
+                        {% if not user.is_master and not user.is_admin %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'appointments:client_list' %}">Мои записи</a>
                             </li>

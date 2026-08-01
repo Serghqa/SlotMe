@@ -23,6 +23,10 @@ def book_appointment_view(request, master_id):
     if request.method != 'POST':
         return redirect('masters:master_detail', master_id=master_id)
 
+    if request.user.is_master or request.user.is_admin:
+        messages.error(request, 'Только клиенты могут записываться на приём.')
+        return redirect('masters:master_detail', master_id=master_id)
+
     master = get_object_or_404(Master, id=master_id, is_active=True)
     service_id = request.POST.get('service_id')
     service = get_object_or_404(master.services, id=service_id, is_active=True)
