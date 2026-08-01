@@ -10,13 +10,18 @@
         </div>
         <div class="card shadow-sm mb-4">
             <div class="card-body">
-                <h4 class="card-title mb-3">{{ user.get_full_name|default:user.username }}</h4>
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h4 class="card-title mb-0">{{ user.get_full_name|default:user.username }}</h4>
+                    <a href="#" class="btn btn-sm btn-link text-secondary p-0 text-decoration-none">
+                        ✏️ Редактировать
+                    </a>
+                </div>
                 <ul class="list-unstyled mb-0">
                     <li class="mb-2">
                         <span class="text-muted d-block small">Электронная почта:</span>
                         <strong>{{ user.email|default:"Не указана" }}</strong>
                     </li>
-                    <li class="mb-2">
+                    <li class="mb-0">
                         <span class="text-muted d-block small">Номер телефона:</span>
                         <strong>{{ user.phone|default:"Не указан" }}</strong>
                     </li>
@@ -27,11 +32,12 @@
         <div class="d-flex gap-2 flex-wrap">
             {% if user.is_master %}
                 <a href="{% url 'appointments:master_schedule' %}" class="btn btn-outline-primary">📅 Моё расписание</a>
+            {% elif user.is_admin %}
+                <a href="{% url 'appointments:admin_list' %}" class="btn btn-outline-primary">Все записи</a>
+                <a href="{% url 'masters:admin_list' %}" class="btn btn-outline-primary">Управление мастерами</a>
             {% else %}
                 <a href="{% url 'appointments:client_list' %}" class="btn btn-outline-primary">📝 Мои записи</a>
             {% endif %}
-            <!-- Заготовка для будущей формы редактирования -->
-            <a href="#" class="btn btn-outline-secondary">Редактировать профиль</a>
         </div>
     </div>
 </div>
