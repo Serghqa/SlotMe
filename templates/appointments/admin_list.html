@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load url_tags %}
 
 {% block title %}Управление записями — SlotMe{% endblock title %}
 
@@ -111,55 +112,8 @@
             </tbody>
         </table>
     </div>
-
     <!-- БЛОК ПАГИНАЦИИ BOOTSTRAP -->
-    {% if appointments.has_other_pages %}
-        <nav aria-label="Навигация по записям" class="mt-4">
-            <ul class="pagination pagination-sm justify-content-center shadow-sm">
-
-                <!-- Кнопка "Назад" -->
-                {% if appointments.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_master %}&master={{ selected_master }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" aria-label="Первая">
-                            <span aria-hidden="true">««</span>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ appointments.previous_page_number }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_master %}&master={{ selected_master }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" aria-label="Назад">
-                            <span aria-hidden="true">« Назад</span>
-                        </a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled"><span class="page-link">««</span></li>
-                    <li class="page-item disabled"><span class="page-link">« Назад</span></li>
-                {% endif %}
-
-                <!-- Текущая страница из общего количества -->
-                 <li class="page-item active" aria-current="page">
-                    <span class="page-link">
-                        {{ appointments.number }} из {{ appointments.paginator.num_pages }}
-                    </span>
-                </li>
-
-                <!-- Кнопка "Вперед" и "В конец" -->
-                 {% if appointments.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ appointments.next_page_number }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_master %}&master={{ selected_master }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" aria-label="Вперед">
-                            <span>Вперед »</span>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ appointments.paginator.num_pages }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_master %}&master={{ selected_master }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" aria-label="Последняя">
-                            <span aria-hidden="true">»»</span>
-                        </a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled"><span class="page-link">Вперед »</span></li>
-                    <li class="page-item disabled"><span class="page-link">»»</span></li>
-                {% endif %}
-            </ul>
-        </nav>
-    {% endif %}
+    {% render_pagination appointments %}
 {% else %}
     <div class="alert alert-info shadow-sm mb-0">Записей не найдено.</div>
 {% endif %}

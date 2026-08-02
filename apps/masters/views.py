@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import datetime
-from apps.appointments.services import get_available_slots
+from apps.appointments.services import get_available_slots, get_paginated_page
 from .models import Master
 
 
@@ -15,8 +15,11 @@ Service = apps.get_model('services', 'Service')
 
 
 def master_list_view(request):
-    masters = Master.objects.filter(is_active=True).prefetch_related('services')
-    return render(request, 'masters/master_list.html', {'masters': masters})
+    masters_queryset = Master.objects.filter(is_active=True).prefetch_related('services').order_by('user__username')
+    page = request.GET.get('page', 1)
+    masters_page = get_paginated_page(masters_queryset, page, 5)
+
+    return render(request, 'masters/master_list.html', {'masters': masters_page})
 
 
 def master_service_list_view(request, service_id):

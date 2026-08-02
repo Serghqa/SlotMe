@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load url_tags %}
 
 {% block title %}
     {% if selected_service %}
@@ -68,6 +69,8 @@
             </div>
         {% endfor %}
     </div>
+    <!-- БЛОК ПАГИНАЦИИ BOOTSTRAP -->
+    {% render_pagination masters %}
 {% else %}
     <div class="alert alert-info">
         {% if selected_service %}
