@@ -72,43 +72,47 @@
         <!-- 2. БЛОК ПАГИНАЦИИ BOOTSTRAP -->
     {% if appointments.has_other_pages %}
         <nav aria-label="Навигация по записям" class="mt-4">
-            <ul class="pagination justify-content-center">
+            <ul class="pagination pagination-sm justify-content-center shadow-sm">
 
                 <!-- Кнопка "Назад" -->
                 {% if appointments.has_previous %}
                     <li class="page-item">
+                        <a class="page-link" href="?page=1{% if current_tab %}&tab={{ current_tab }}{% endif %}" aria-label="Первая">
+                            <span aria-hidden="true">««</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
                         <a class="page-link" href="?tab={{ current_tab }}&page={{ appointments.previous_page_number }}" aria-label="Назад">
-                            <span>«</span>
+                            <span aria-hidden="true">« Назад</span>
                         </a>
                     </li>
                 {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link" aria-hidden="true">«</span>
-                    </li>
+                    <li class="page-item disabled"><span class="page-link">««</span></li>
+                    <li class="page-item disabled"><span class="page-link">« Назад</span></li>
                 {% endif %}
 
-                <!-- Номера страниц -->
-                {% for num in appointments.paginator.page_range %}
-                    {% if appointments.number == num %}
-                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                    {% else %}
-                        <li class="page-item">
-                            <a class="page-link" href="?tab={{ current_tab }}&page={{ num }}">{{ num }}</a>
-                        </li>
-                    {% endif %}
-                {% endfor %}
+                <!-- Текущая страница из общего количества -->
+                 <li class="page-item active" aria-current="page">
+                    <span class="page-link">
+                        {{ appointments.number }} из {{ appointments.paginator.num_pages }}
+                    </span>
+                </li>
 
-                <!-- Кнопка "Вперед" -->
-                {% if appointments.has_next %}
+                <!-- Кнопка "Вперед" и "В конец" -->
+                 {% if appointments.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?tab={{ current_tab }}&page={{ appointments.next_page_number }}" aria-label="Вперед">
-                            <span>»</span>
+                        <a class="page-link" href="?page={{ appointments.next_page_number }}{% if current_tab %}&tab={{ current_tab }}{% endif %}" aria-label="Вперед">
+                            <span>Вперед »</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ appointments.paginator.num_pages }}{% if current_tab %}&tab={{ current_tab }}{% endif %}" aria-label="Последняя">
+                            <span aria-hidden="true">»»</span>
                         </a>
                     </li>
                 {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link" aria-hidden="true">»</span>
-                    </li>
+                    <li class="page-item disabled"><span class="page-link">Вперед »</span></li>
+                    <li class="page-item disabled"><span class="page-link">»»</span></li>
                 {% endif %}
 
             </ul>

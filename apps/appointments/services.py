@@ -1,5 +1,6 @@
 from django.apps import apps
 from django.core.cache import cache
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import DateTimeField
 from django.db.models.functions import Cast
 from django.utils import timezone
@@ -11,6 +12,22 @@ Master = apps.get_model('masters', 'Master')
 WorkSchedule = apps.get_model('masters', 'WorkSchedule')
 ScheduleException = apps.get_model('masters', 'ScheduleException')
 Service = apps.get_model('services', 'Service')
+
+
+def get_paginated_page(queryset, page_number, per_page=10):
+    """
+    Универсальная пагинация QuerySet.
+    """
+    paginator = Paginator(queryset, per_page)
+
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    return page_obj
 
 
 def get_available_slots(master: Master, date: date, service: Service):

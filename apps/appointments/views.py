@@ -12,7 +12,7 @@ from django.urls import reverse
 from apps.core.decorators import master_required, admin_required
 from datetime import datetime, timedelta
 from .models import Appointment
-from .services import invalidate_slots_cache
+from .services import invalidate_slots_cache, get_paginated_page
 
 
 Master = apps.get_model('masters', 'Master')
@@ -95,7 +95,7 @@ def book_appointment_view(request, master_id):
 
 @login_required
 def client_appointments_view(request):
-    queryset = Appointment.objects.filter(
+    appointments_queryset = Appointment.objects.filter(
         client=request.user
     ).select_related('master__user', 'service').order_by('-start_datetime')
 
@@ -108,28 +108,21 @@ def client_appointments_view(request):
         # Прошедшими считаются записи:
         # Либо у них финальный статус (completed, cancelled, no_show)
         # Либо статус все еще 'booked', но время окончания приема (start_datetime + duration) УЖЕ В ПРОШЛОМ
-        appointments_list = queryset.filter(
+        appointments_queryset = appointments_queryset.filter(
             Q(status__in=['completed', 'cancelled', 'no_show']) |
             Q(status='booked', end_datetime__lt=now)
         )
     else:
-        appointments_list = queryset.filter(
+        appointments_queryset = appointments_queryset.filter(
             status='booked',
             start_datetime__gte=now
         )
-    # Пагинация: показываем по 10 записей на одной странице
-    paginator = Paginator(appointments_list, 10)
-    page = request.GET.get('page')
 
-    try:
-        appointments = paginator.page(page)
-    except PageNotAnInteger:
-        appointments = paginator.page(1)
-    except EmptyPage:
-        appointments = paginator.page(paginator.num_pages)
+    page = request.GET.get('page', 1)
+    appointments_page = get_paginated_page(appointments_queryset, page, 10)
 
     context = {
-        'appointments': appointments,
+        'appointments': appointments_page,
         'current_tab': tab
     }
 
@@ -311,34 +304,28 @@ def admin_appointments_view(request):
     date_str = request.GET.get('date')
     master_id = request.GET.get('master')
     status = request.GET.get('status')
-    page = request.GET.get('page', 1)
 
     now = timezone.localtime()
 
-    appointments = Appointment.objects.select_related(
+    appointments_queryset = Appointment.objects.select_related(
         'client', 'master__user', 'service'
     ).order_by('-start_datetime')
 
     if date_str:
         try:
             filter_date = datetime.fromisoformat(date_str).date()
-            appointments = appointments.filter(start_datetime__date=filter_date)
+            appointments_queryset = appointments_queryset.filter(start_datetime__date=filter_date)
         except ValueError:
             date_str = ""
 
     if master_id and master_id.isdigit():
-        appointments = appointments.filter(master_id=master_id)
+        appointments_queryset = appointments_queryset.filter(master_id=master_id)
 
     if status:
-        appointments = appointments.filter(status=status)
+        appointments_queryset = appointments_queryset.filter(status=status)
 
-    paginator = Paginator(appointments, 5)
-    try:
-        appointments_page = paginator.page(page)
-    except PageNotAnInteger:
-        appointments_page = paginator.page(1)
-    except EmptyPage:
-        appointments_page = paginator.page(paginator.num_pages)
+    page = request.GET.get('page', 1)
+    appointments_page = get_paginated_page(appointments_queryset, page, 10)
 
     # Список мастеров для фильтра
     masters = Master.objects.filter(is_active=True)
