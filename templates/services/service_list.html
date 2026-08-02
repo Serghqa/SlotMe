@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load url_tags %}
 
 {% block title %}Услуги — SlotMe{% endblock title %}
 
@@ -31,6 +32,8 @@
             </div>
         {% endfor %}
     </div>
+    <!-- БЛОК ПАГИНАЦИИ BOOTSTRAP -->
+    {% render_pagination services %}
 {% else %}
     <div class="alert alert-info">Услуг пока нет.</div>
 {% endif %}
