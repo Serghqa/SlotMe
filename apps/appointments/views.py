@@ -311,23 +311,20 @@ def admin_appointments_view(request):
     date_str = request.GET.get('date')
     master_id = request.GET.get('master')
     status = request.GET.get('status')
+    page = request.GET.get('page', 1)
 
     now = timezone.localtime()
-
-    if date_str:
-        try:
-            filter_date = datetime.fromisoformat(date_str).date()
-        except ValueError:
-            filter_date = timezone.localdate()
-            date_str = ""
-    else:
-        filter_date = timezone.localdate()
 
     appointments = Appointment.objects.select_related(
         'client', 'master__user', 'service'
     ).order_by('-start_datetime')
 
-    appointments = appointments.filter(start_datetime__date=filter_date)
+    if date_str:
+        try:
+            filter_date = datetime.fromisoformat(date_str).date()
+            appointments = appointments.filter(start_datetime__date=filter_date)
+        except ValueError:
+            date_str = ""
 
     if master_id and master_id.isdigit():
         appointments = appointments.filter(master_id=master_id)
@@ -335,11 +332,19 @@ def admin_appointments_view(request):
     if status:
         appointments = appointments.filter(status=status)
 
+    paginator = Paginator(appointments, 5)
+    try:
+        appointments_page = paginator.page(page)
+    except PageNotAnInteger:
+        appointments_page = paginator.page(1)
+    except EmptyPage:
+        appointments_page = paginator.page(paginator.num_pages)
+
     # Список мастеров для фильтра
     masters = Master.objects.filter(is_active=True)
 
     context = {
-        'appointments': appointments,
+        'appointments': appointments_page,
         'masters': masters,
         'selected_date': date_str or '',
         'selected_master': master_id or '',
