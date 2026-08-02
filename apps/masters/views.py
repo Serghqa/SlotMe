@@ -103,6 +103,10 @@ def admin_master_create_view(request):
             messages.error(request, 'Пользователя с таким логином не существует.')
             return redirect('masters:admin_create')
 
+        if user.is_admin:
+            messages.error(request, 'Администратора нельзя сделать мастером.')
+            return redirect('masters:admin_create')
+
         if Master.objects.filter(user=user).exists():
             messages.error(request, 'Такой мастер уже существует.')
             return redirect('masters:admin_create')
