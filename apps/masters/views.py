@@ -5,6 +5,7 @@ from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.utils.http import urlencode
 from django.urls import reverse
 from datetime import datetime
 from apps.appointments.services import get_available_slots, get_paginated_page
@@ -98,6 +99,14 @@ def admin_master_list_view(request):
 
 @admin_required
 def admin_master_create_view(request):
+    redirect_to = request.POST.get('next') or request.GET.get('next') or reverse('masters:admin_list')
+
+    def redirect_with_error():
+        base_url = reverse('masters:admin_create')
+        query_string = urlencode({'next': redirect_to})
+
+        return redirect(f"{base_url}?{query_string}")
+
     if request.method == 'POST':
         username = request.POST.get('username')
         service_ids = request.POST.getlist('services')
@@ -105,20 +114,20 @@ def admin_master_create_view(request):
         # Проверки
         if not username:
             messages.error(request, 'Логин обязателен.')
-            return redirect('masters:admin_create')
+            return redirect_with_error()
 
         user = User.objects.filter(username=username).first()
         if not user:
             messages.error(request, 'Пользователя с таким логином не существует.')
-            return redirect('masters:admin_create')
+            return redirect_with_error()
 
         if user.is_admin:
             messages.error(request, 'Администратора нельзя сделать мастером.')
-            return redirect('masters:admin_create')
+            return redirect_with_error()
 
         if Master.objects.filter(user=user).exists():
             messages.error(request, 'Такой мастер уже существует.')
-            return redirect('masters:admin_create')
+            return redirect_with_error()
 
         # Создаём профиль мастера
         master = Master.objects.create(user=user)
@@ -128,10 +137,14 @@ def admin_master_create_view(request):
             master.services.set(service_ids)
 
         messages.success(request, f'Мастер {user.get_full_name() or username} создан.')
-        return redirect('masters:admin_list')
+        return redirect(redirect_to)
 
     services = Service.objects.filter(is_active=True)
-    return render(request, 'masters/admin_create.html', {'services': services})
+    context = {
+        'services': services,
+        'back_masters_url': redirect_to,
+    }
+    return render(request, 'masters/admin_create.html', context)
 
 
 @admin_required

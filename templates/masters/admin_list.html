@@ -6,7 +6,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0 fw-bold">Управление мастерами</h2>
-    <a href="{% url 'masters:admin_create' %}" class="btn btn-primary px-4">+ Добавить мастера</a>
+    <a href="{% url 'masters:admin_create' %}?next={{ request.get_full_path }}" class="btn btn-primary px-4">+ Добавить мастера</a>
 </div>
 
 {% if masters %}
