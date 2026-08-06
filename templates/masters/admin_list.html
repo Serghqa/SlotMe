@@ -35,8 +35,8 @@
                         </td>
                         <td>
                             {% if master.is_active %}
-                                <a href="{% url 'masters:admin_services' master.id %}" class="btn btn-sm btn-outline-primary">
-                                    ⚙️ Изменить ({{ master.services_count|default:"master.services.count" }})
+                                <a href="{% url 'masters:admin_services' master.id %}?next={{ request.get_full_path }}" class="btn btn-sm btn-outline-primary">
+                                    ⚙️ Изменить ({{ master.services_count|default:master.services.all.count }})
                                 </a>
                             {% else %}
                                 <span class="text-muted small">--</span>
@@ -45,6 +45,9 @@
                         <td>
                             <form method="post" action="{% url 'masters:admin_toggle' master.id %}">
                                 {% csrf_token %}
+
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
                                 {% if master.is_active %}
                                     <button type="submit" class="btn btn-sm btn-outline-warning w-100">Заблокировать</button>
                                 {% else %}

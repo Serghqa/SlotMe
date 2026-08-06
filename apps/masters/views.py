@@ -144,23 +144,28 @@ def admin_master_toggle_active_view(request, master_id):
     status = 'разблокирован' if master.is_active else 'заблокирован'
     messages.success(request, f'Мастер {master.user.get_full_name() or master.user.username} {status}.')
 
-    return redirect('masters:admin_list')
+    redirect_to = request.POST.get('next') or reverse('masters:admin_list')
+
+    return redirect(redirect_to)
 
 
 @admin_required
 def admin_master_services(request, master_id):
     master = get_object_or_404(Master, id=master_id)
 
+    redirect_to = request.POST.get('next') or request.GET.get('next') or reverse('masters:admin_list')
+
     if request.method == 'POST':
         selected_service_ids = request.POST.getlist('services')
-
         master.services.set(selected_service_ids)
 
         messages.success(request, f"Услуги мастера {master} успешно обновлены.")
-        return redirect('masters:admin_list')
+        return redirect(redirect_to)
 
     all_services = Service.objects.all()
-    return render(request, 'masters/admin_services.html', {
+    context = {
         'master': master,
-        'all_services': all_services
-    })
+        'all_services': all_services,
+        'back_masters_url': redirect_to,
+    }
+    return render(request, 'masters/admin_services.html', context)
