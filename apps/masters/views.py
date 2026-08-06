@@ -86,11 +86,14 @@ def master_detail_view(request, master_id):
 
 @admin_required
 def admin_master_list_view(request):
-    masters = Master.objects.prefetch_related('services')\
-        .order_by('user__last_name')\
-            .annotate(services_count=Count('services'))\
-                .order_by('user__last_name', 'user__first_name')
-    return render(request, 'masters/admin_list.html', {'masters': masters})
+    masters_queryset = Master.objects.prefetch_related('services')\
+        .order_by('user__last_name', 'user__first_name')\
+            .annotate(services_count=Count('services'))
+
+    page = request.GET.get('page', 1)
+    masters_page = get_paginated_page(masters_queryset, page, 2)
+
+    return render(request, 'masters/admin_list.html', {'masters': masters_page})
 
 
 @admin_required
