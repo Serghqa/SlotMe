@@ -5,6 +5,7 @@ from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.urls import reverse
 from datetime import datetime
 from apps.appointments.services import get_available_slots, get_paginated_page
 from .models import Master
@@ -29,9 +30,11 @@ def master_service_list_view(request, service_id):
         is_active=True
     )
     masters = service.masters.filter(is_active=True).prefetch_related('services')
+    back_services_url = request.META.get('HTTP_REFERER', reverse('services:services_list'))
     context = {
         'masters': masters,
         'selected_service': service,
+        'back_services_url': back_services_url,
     }
 
     return render(request, 'masters/master_list.html', context)
