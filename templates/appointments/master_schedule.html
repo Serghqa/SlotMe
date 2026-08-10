@@ -35,7 +35,6 @@
                     <th>Услуга</th>
                     <th>Стоимость</th>
                     <th>Статус</th>
-                    <th style="min-width: 180px;">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -62,35 +61,6 @@
                             {% elif appointment.status == 'cancelled' %}
                                 <span class="badge bg-danger">Отменена</span>
                             {% endif %}
-                        </td>
-
-                        <!-- Колонка с действиями мастеров -->
-                        <td>
-                            <div class="d-flex gap-1">
-                                {% if appointment.status == 'booked' %}
-                                    {% if appointment.end_datetime < now %}
-                                        <form method="post" action="{% url 'appointments:update_status' appointment.id %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="status" value="completed">
-                                            <button type="submit" class="btn btn-sm btn-outline-success">Завершить</button>
-                                        </form>
-                                    {% endif %}
-                                    {% if appointment.start_datetime < now %}
-                                        <form method="post" action="{% url 'appointments:update_status' appointment.id %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="status" value="no_show">
-                                            <button type="submit" class="btn btn-sm btn-outline-warning">Неявка</button>
-                                        </form>
-                                    {% endif %}
-                                    {% if appointment.can_be_cancelled %}
-                                        <a href="{% url 'appointments:master_cancel' appointment.id %}" class="btn btn-sm btn-outline-danger">
-                                            Отменить
-                                        </a>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-muted small">—</span>
-                                {% endif %}
-                            </div>
                         </td>
                     </tr>
                 {% endfor %}

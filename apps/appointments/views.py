@@ -238,35 +238,6 @@ def master_schedule_view(request):
     return render(request, 'appointments/master_schedule.html', context)
 
 
-@master_required
-@require_POST
-def master_update_appointment_status_view(request, appointment_id):
-    appointment = get_object_or_404(
-        Appointment,
-        id=appointment_id,
-        master=request.user.master_profile,
-        status='booked'
-    )
-    selected_date = appointment.start_datetime.date()
-    if appointment.start_datetime > timezone.now():
-        messages.error(request, 'Нельзя изменить статус будущей записи.')
-        return redirect(f"{reverse('appointments:master_schedule')}?date={selected_date}")
-
-    new_status = request.POST.get('status')
-    if new_status in ['completed', 'no_show']:
-        appointment.status = new_status
-        appointment.save()
-        if new_status == 'completed':
-            messages.success(request, 'Запись отмечена как завершённая.')
-        elif new_status == 'no_show':
-            messages.warning(request, 'Запись отмечена как неявка.')
-    else:
-        messages.error(request, 'Неверный статус.')
-
-
-    return redirect(f"{reverse('appointments:master_schedule')}?date={selected_date}")
-
-
 @admin_required
 @require_POST
 def admin_update_appointment_status_view(request, appointment_id):
