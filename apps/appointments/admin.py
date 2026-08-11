@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import Appointment
 
+
 @admin.register(Appointment)
 class AppointmentAdmin(admin.ModelAdmin):
     list_display = ('client', 'master', 'service', 'start_datetime', 'end_datetime', 'status', 'created_at')

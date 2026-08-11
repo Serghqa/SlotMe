@@ -16,6 +16,7 @@ class AppointmentValidationMixin:
             raise ValidationError('Заполните обязательные поля.')
 
         if not self.pk:
+            self._validate_user(errors)
             self._validate_master(errors)
             self._validate_service(errors)
             self._validate_master_service(errors)
@@ -31,6 +32,22 @@ class AppointmentValidationMixin:
 
     def _add_error(self, errors: dict, field_error: str, text_error: str):
         errors.setdefault(field_error, []).append(text_error)
+
+    def _validate_user(self, errors):
+        is_admin = self.client.is_admin
+        is_master = self.client.is_master
+        if is_admin or is_master:
+            self._add_error(
+                errors=errors,
+                field_error='client',
+                text_error=f'Пользователь {self.client} является сотрудником и не может быть записан.'
+            )
+        if not self.client.is_active:
+            self._add_error(
+                errors=errors,
+                field_error='client',
+                text_error=f'Пользователь {self.client} не активный.'
+            )
 
     def _validate_service(self, errors):
         if not self.service.is_active:
