@@ -177,43 +177,6 @@ def client_cancel_appointment_view(request, appointment_id):
 
 
 @master_required
-def master_cancel_appointment_view(request, appointment_id):
-    appointment = get_object_or_404(
-        Appointment.objects.select_related('master'),
-        id=appointment_id,
-        master=request.user.master_profile,
-        status='booked'
-    )
-
-    selected_date = appointment.start_datetime.date()
-
-    if not appointment.can_be_cancelled:
-        if appointment.is_past:
-            messages.error(request, 'Нельзя отменить прошедшую запись.')
-        else:
-            messages.error(request, 'Можно отменить только активную (забронированную) запись.')
-        return redirect(f"{reverse('appointments:master_schedule')}?date={selected_date}")
-
-    if request.method == 'POST':
-        reason = request.POST.get('reason', '').strip()
-        if not reason:
-            reason = 'Отменено мастером'
-        else:
-            reason = reason[:500]
-
-        appointment.status = 'cancelled'
-        appointment.cancel_reason = reason
-        appointment.save()
-
-        invalidate_slots_cache(appointment.master, selected_date)
-
-        messages.success(request, f'Запись #{appointment.id} успешно отменена.')
-        return redirect(f"{reverse('appointments:master_schedule')}?date={selected_date}")
-
-    return render(request, 'appointments/cancel_confirm.html', {'appointment': appointment, 'role': 'master'})
-
-
-@master_required
 def master_schedule_view(request):
     date_str = request.GET.get('date')
     selected_date = timezone.localdate()
