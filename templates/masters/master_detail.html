@@ -59,7 +59,7 @@
                             <button type="button"
                                 class="btn btn-outline-primary px-3 py-2"
                                 data-bs-toggle="modal"
-                                data-bs-target="#bookingModal"
+                                data-bs-target="#bookingActionModal"
                                 data-bs-time="{{ slot|time:'H:i' }}">
                                 {{ slot|time:'H:i' }}
                             </button>
@@ -89,11 +89,11 @@
 </div>
 
 <!-- Модальное окно -->
-<div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="bookingActionModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h1 class="modal-title fs-5" id="exampleModalLabel">Подтверждение бронирования</h1>
+                <h1 class="modal-title fw-bold" id="bookingModalLabel">Подтверждение бронирования</h1>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
             </div>
             <div class="modal-body">
@@ -119,7 +119,7 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const bookingModal = document.getElementById('bookingModal');
+        const bookingModal = document.getElementById('bookingActionModal');
 
         if (bookingModal) {
             bookingModal.addEventListener('show.bs.modal', function (event) {

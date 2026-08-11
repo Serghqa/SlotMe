@@ -81,22 +81,35 @@
                         <td>
                             <div class="d-flex gap-1">
                                 {% if appointment.status == 'booked' %}
+                                    <!-- Кнопка: Завершить -->
                                     {% if appointment.end_datetime < now %}
-                                        <form method="post" action="{% url 'appointments:admin_update_status' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
-                                            onsubmit="return confirm('Изменить статус записи #{{ appointment.id }} на «Завершена»?')">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="status" value="completed">
-                                            <button type="submit" class="btn btn-sm btn-outline-success">Завершить</button>
-                                        </form>
+                                        <button type="button"
+                                            class="btn btn-sm btn-outline-success admin-action-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#adminActionModal"
+                                            data-action-url="{% url 'appointments:admin_update_status' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+                                            data-status-value="completed"
+                                            data-title="Завершить запись"
+                                            data-text="Изменить статус записи #{{ appointment.id }} на «Завершена»?"
+                                            data-btn-class="btn-success">
+                                        Завершить
+                                        </button>
                                     {% endif %}
+                                    <!-- Кнопка: Неявка -->
                                     {% if appointment.start_datetime < now %}
-                                        <form method="post" action="{% url 'appointments:admin_update_status' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
-                                            onsubmit="return confirm('Изменить статус записи #{{ appointment.id }} на «Неявка»?')">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="status" value="no_show">
-                                            <button type="submit" class="btn btn-sm btn-outline-warning">Неявка</button>
-                                        </form>
+                                        <button type="button"
+                                            class="btn btn-sm btn-outline-warning admin-action-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#adminActionModal"
+                                            data-action-url="{% url 'appointments:admin_update_status' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+                                            data-status-value="no_show"
+                                            data-title="Неявка"
+                                            data-text="Изменить статус записи #{{ appointment.id }} на «Неявка»?"
+                                            data-btn-class="btn-warning">
+                                        Неявка
+                                        </button>
                                     {% endif %}
+                                    <!-- Кнопка: Отменить -->
                                     {% if appointment.can_be_cancelled %}
                                         <a href="{% url 'appointments:admin_cancel' appointment.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-sm btn-outline-danger">
                                             Отменить
@@ -117,4 +130,66 @@
 {% else %}
     <div class="alert alert-info shadow-sm mb-0">Записей не найдено.</div>
 {% endif %}
+
+<!-- Универсальное модальное окно для админ-действий -->
+<div class="modal fade" id="adminActionModal" tabindex="-1" aria-labelledby="adminActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="adminActionModalLabel">Подтверждение действия</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body" id="modal-action-text">
+                Вы уверены, что хотите выполнить это действие?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <form method="post" id="modal-action-form" action="" class="d-inline">
+                    {% csrf_token %}
+                    <!-- Скрытый инпут для статуса (заполнится скриптом, если нужно) -->
+                    <input type="hidden" name="status" id="modal-status-input" value="">
+                    <button type="submit" id="modal-submit-btn" class="btn">Подтвердить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Скрипт управления окном -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const adminModal = document.getElementById('adminActionModal');
+
+    if (adminModal) {
+        adminModal.addEventListener('show.bs.modal', function (event) {
+            // Кнопка, на которую нажал менеджер
+            const button = event.relatedTarget;
+
+            // Извлекаем все переданные данные из data-атрибутов
+            const actionUrl = button.getAttribute('data-action-url');
+            const statusValue = button.getAttribute('data-status-value');
+            const titleText = button.getAttribute('data-title');
+            const bodyText = button.getAttribute('data-text');
+            const btnClass = button.getAttribute('data-btn-class');
+
+            // Находим элементы в модальном окне
+            const modalTitle = adminModal.querySelector('#adminActionModalLabel');
+            const modalText = adminModal.querySelector('#modal-action-text');
+            const modalForm = adminModal.querySelector('#modal-action-form');
+            const modalStatusInput = adminModal.querySelector('#modal-status-input');
+            const modalSubmitBtn = adminModal.querySelector('#modal-submit-btn');
+
+            // Обновляем контент окна
+            modalTitle.textContent = titleText;
+            modalText.textContent = bodyText;
+            modalForm.setAttribute('action', actionUrl);
+            modalStatusInput.value = statusValue;
+
+            // Сбрасываем старые цвета кнопки и ставим новый класс (btn-success, btn-danger или btn-warning)
+            modalSubmitBtn.className = 'btn ' + btnClass;
+        });
+    }
+});
+</script>
+
 {% endblock content %}
