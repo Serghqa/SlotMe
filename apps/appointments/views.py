@@ -19,23 +19,36 @@ Master = apps.get_model('masters', 'Master')
 
 @login_required
 def book_appointment_view(request, master_id):
+    redirect_url = reverse('masters:master_detail', kwargs={'master_id': master_id})
+    query_params = {}
+
+    service_id = request.POST.get('service_id')
+    date_str = request.POST.get('date')
+    time_str = request.POST.get('time')
+
+    if service_id: query_params['service_id'] = service_id
+    if date_str: query_params['date'] = date_str
+
+    def get_redirect_response():
+        if query_params:
+            return redirect(f"{redirect_url}?{urlencode(query_params)}")
+        else:
+            return redirect(redirect_url)
+
     if request.method != 'POST':
-        return redirect('masters:master_detail', master_id=master_id)
+        return get_redirect_response()
 
     if request.user.is_master or request.user.is_admin:
         messages.error(request, 'Только клиенты могут записываться на приём.')
-        return redirect('masters:master_detail', master_id=master_id)
+        return get_redirect_response()
 
     master = get_object_or_404(Master, id=master_id, is_active=True)
-    service_id = request.POST.get('service_id')
     service = get_object_or_404(master.services, id=service_id, is_active=True)
-    date_str = request.POST.get('date')
-    time_str = request.POST.get('time')
 
     # Проверка обязательных полей
     if not date_str or not time_str:
         messages.error(request, 'Выберите дату и время.')
-        return redirect('masters:master_detail', master_id=master_id)
+        return get_redirect_response()
 
     # Собираем datetime
     try:
@@ -44,12 +57,12 @@ def book_appointment_view(request, master_id):
         )
     except ValueError:
         messages.error(request, 'Неверный формат даты или времени.')
-        return redirect('masters:master_detail', master_id=master_id)
+        return get_redirect_response()
 
     # Проверка: не в прошлом
     if start_datetime < timezone.now():
         messages.error(request, 'Нельзя записаться на прошедшее время.')
-        return redirect('masters:master_detail', master_id=master_id)
+        return get_redirect_response()
 
     # Проверка: слот свободен (без кэша — прямой запрос)
     end_datetime = start_datetime + service.duration
@@ -66,7 +79,7 @@ def book_appointment_view(request, master_id):
             if overlapping:
                 messages.error(request, 'Это время только что заняли. Выберите другое время.')
                 invalidate_slots_cache(master, start_datetime.date())
-                return redirect('masters:master_detail', master_id=master_id)
+                return get_redirect_response()
 
             # Создаём запись
             appointment = Appointment.objects.create(
@@ -78,7 +91,7 @@ def book_appointment_view(request, master_id):
     except Exception:
         invalidate_slots_cache(master, start_datetime.date())
         messages.error(request, 'Не удалось создать запись. Попробуйте снова.')
-        return redirect('masters:master_detail', master_id=master_id)
+        return get_redirect_response()
 
     # Сбрасываем кэш слотов
     invalidate_slots_cache(master, start_datetime.date())

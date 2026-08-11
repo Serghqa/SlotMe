@@ -55,13 +55,19 @@
             {% if slots %}
                 <div class="d-flex flex-wrap gap-2">
                     {% for slot in slots %}
-                        <button type="button"
-                            class="btn btn-outline-primary px-3 py-2"
-                            data-bs-toggle="modal"
-                            data-bs-target="#bookingModal"
-                            data-bs-time="{{ slot|time:'H:i' }}">
-                            {{ slot|time:'H:i' }}
-                        </button>
+                        {% if user.is_authenticated %}
+                            <button type="button"
+                                class="btn btn-outline-primary px-3 py-2"
+                                data-bs-toggle="modal"
+                                data-bs-target="#bookingModal"
+                                data-bs-time="{{ slot|time:'H:i' }}">
+                                {{ slot|time:'H:i' }}
+                            </button>
+                        {% else %}
+                            <a href="{% url 'users:login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-outline-primary px-3 py-2">
+                                {{ slot|time:'H:i' }}
+                            </a>
+                        {% endif %}
                     {% endfor %}
                 </div>
             {% else %}
