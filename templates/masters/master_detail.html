@@ -55,15 +55,13 @@
             {% if slots %}
                 <div class="d-flex flex-wrap gap-2">
                     {% for slot in slots %}
-                        <form method="post" action="{% url 'appointments:book' master.id %}" class="d-inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="service_id" value="{{ selected_service.id }}">
-                            <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
-                            <input type="hidden" name="time" value="{{ slot|time:'H:i' }}">
-                            <button type="submit" class="btn btn-outline-primary px-3 py-2">
-                                {{ slot|time:'H:i' }}
-                            </button>
-                        </form>
+                        <button type="button"
+                            class="btn btn-outline-primary px-3 py-2"
+                            data-bs-toggle="modal"
+                            data-bs-target="#bookingModal"
+                            data-bs-time="{{ slot|time:'H:i' }}">
+                            {{ slot|time:'H:i' }}
+                        </button>
                     {% endfor %}
                 </div>
             {% else %}
@@ -83,4 +81,58 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Модальное окно -->
+<div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Подтверждение бронирования</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body">
+                Вы будете записаны на услугу
+                <strong>{{ selected_service.name }}</strong>
+                к мастеру <strong>{{ master.user.get_full_name|default:master.user.username }}</strong>
+                на <strong>{{ selected_date|date:'d.m.Y' }}
+                в <span id="modal-slot-time-text">--:--</span></strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отменить</button>
+                <form method="post" action="{% url 'appointments:book' master.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="service_id" value="{{ selected_service.id }}">
+                    <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                    <input type="hidden" name="time" id="modal-slot-time" value="">
+                    <button type="submit" class="btn btn-primary">Записаться</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const bookingModal = document.getElementById('bookingModal');
+
+        if (bookingModal) {
+            bookingModal.addEventListener('show.bs.modal', function (event) {
+                // Кнопка, которая открыла модальное окно
+                const button = event.relatedTarget;
+
+                // Извлекаем время из атрибута data-bs-time
+                const slotTime = button.getAttribute('data-bs-time');
+
+                // Находим элементы внутри модального окна
+                const modalTimeText = bookingModal.querySelector('#modal-slot-time-text');
+                const modalTimeInput = bookingModal.querySelector('#modal-slot-time');
+
+                // Обновляем текст и значение скрытого инпута
+                modalTimeText.textContent = slotTime;
+                modalTimeInput.value = slotTime;
+            });
+        }
+    });
+</script>
+
 {% endblock content %}

@@ -1,5 +1,4 @@
 from django.apps import apps
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.db.models import Q
 from django.contrib import messages
