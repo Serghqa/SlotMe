@@ -60,6 +60,7 @@
                                 class="btn btn-outline-primary px-3 py-2"
                                 data-bs-toggle="modal"
                                 data-bs-target="#bookingActionModal"
+                                data-text="Вы будете записаны на услугу {{ selected_service.name }} к мастеру {{ master.user.get_full_name|default:master.user.username }} на {{ selected_date|date:'d.m.Y' }} в {{ slot|time:'H:i' }}"
                                 data-bs-time="{{ slot|time:'H:i' }}">
                                 {{ slot|time:'H:i' }}
                             </button>
@@ -93,15 +94,11 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h1 class="modal-title fw-bold" id="bookingModalLabel">Подтверждение бронирования</h1>
+                <h5 class="modal-title fw-bold" id="bookingModalLabel">Подтверждение бронирования</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
             </div>
-            <div class="modal-body">
-                Вы будете записаны на услугу
-                <strong>{{ selected_service.name }}</strong>
-                к мастеру <strong>{{ master.user.get_full_name|default:master.user.username }}</strong>
-                на <strong>{{ selected_date|date:'d.m.Y' }}
-                в <span id="modal-slot-time-text">--:--</span></strong>?
+            <div class="modal-body" id="modal-action-text">
+                Подтвердите действие.
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отменить</button>
@@ -128,14 +125,15 @@
 
                 // Извлекаем время из атрибута data-bs-time
                 const slotTime = button.getAttribute('data-bs-time');
+                const bodyText = button.getAttribute('data-text');
 
                 // Находим элементы внутри модального окна
-                const modalTimeText = bookingModal.querySelector('#modal-slot-time-text');
                 const modalTimeInput = bookingModal.querySelector('#modal-slot-time');
+                const modalText = bookingModal.querySelector('#modal-action-text');
 
                 // Обновляем текст и значение скрытого инпута
-                modalTimeText.textContent = slotTime;
                 modalTimeInput.value = slotTime;
+                modalText.textContent = bodyText;
             });
         }
     });

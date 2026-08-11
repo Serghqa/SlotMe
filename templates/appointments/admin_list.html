@@ -146,7 +146,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                 <form method="post" id="modal-action-form" action="" class="d-inline">
                     {% csrf_token %}
-                    <!-- Скрытый инпут для статуса (заполнится скриптом, если нужно) -->
+                    <!-- Скрытый инпут для статуса (заполнится скриптом) -->
                     <input type="hidden" name="status" id="modal-status-input" value="">
                     <button type="submit" id="modal-submit-btn" class="btn">Подтвердить</button>
                 </form>
