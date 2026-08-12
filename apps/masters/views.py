@@ -121,6 +121,10 @@ def admin_master_create_view(request):
             messages.error(request, 'Пользователя с таким логином не существует.')
             return redirect_with_error()
 
+        if user.appointments.exists():
+            messages.error(request, 'Это активный пользователь сервиса.')
+            return redirect_with_error()
+
         if user.is_admin:
             messages.error(request, 'Администратора нельзя сделать мастером.')
             return redirect_with_error()
