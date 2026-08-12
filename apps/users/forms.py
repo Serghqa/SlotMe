@@ -12,7 +12,7 @@ class RegistrationForm(UserCreationForm):
     )
     phone = forms.CharField(
         max_length=20,
-        required=False,
+        required=True,
         label='Телефон',
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )

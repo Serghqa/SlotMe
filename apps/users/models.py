@@ -4,7 +4,7 @@ from django.db import models
 
 class User(AbstractUser):
     email = models.EmailField(unique=True, verbose_name='Электронная почта')
-    phone = models.CharField(max_length=20, blank=True, verbose_name='Телефон')
+    phone = models.CharField(unique=True, max_length=20, verbose_name='Телефон')
 
     class Meta:
         verbose_name = 'Пользователь'
