@@ -41,6 +41,7 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    'phonenumber_field',
     # 'allauth',
     # 'allauth.account',
     # 'allauth.socialaccount',
