@@ -1,18 +1,34 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm, AuthenticationForm
 from django.core.exceptions import ValidationError
 from .models import User
+
+
+class LoginForm(AuthenticationForm):
+    username = forms.EmailField(
+        label='Электронная почта',
+        widget=forms.EmailInput(attrs={
+            'id': 'id_email',
+            'class': 'form-control',
+            'autofocus': True,
+        })
+    )
 
 
 class RegistrationForm(UserCreationForm):
     email = forms.EmailField(
         required=True,
-        label='Email',
+        label='Электронная почта',
     )
     phone = forms.CharField(
         max_length=20,
         required=True,
         label='Телефон',
+    )
+    first_name = forms.CharField(
+        max_length=30,
+        required=True,
+        label='Имя',
     )
 
     class Meta:
@@ -39,7 +55,6 @@ class UserCreationFormAdmin(UserCreationForm):
     class Meta:
         model = User
         fields = ('email', 'first_name', 'phone')
-
 
 
 class UserChangeFormAdmin(UserChangeForm):

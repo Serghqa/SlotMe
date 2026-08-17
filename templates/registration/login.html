@@ -13,18 +13,18 @@
 
                 {% if form.non_field_errors or form.errors %}
                     <div class="alert alert-danger small py-2 text-center" role="alert">
-                        Неверный логин или пароль. Попробуйте снова.
+                        Неверное имя почты или пароль. Попробуйте снова.
                     </div>
                 {% endif %}
 
                 <div class="mb-3">
-                    <label for="id_username" class="form-label small fw-bold">Логин</label>
-                    <input type="text"
+                    <label for="id_email" class="form-label small fw-bold">Электронная почта</label>
+                    <input type="email"
                            name="username"
                            id="id_username"
                            class="form-control"
                            value="{{ form.username.value|default:'' }}"
-                           autocomplete="username"
+                           autocomplete="email"
                            required>
                 </div>
 
