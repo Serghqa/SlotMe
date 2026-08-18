@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ master.user.get_full_name|default:master.user.username }} — SlotMe{% endblock title %}
+{% block title %}{{ master.user }} — SlotMe{% endblock title %}
 
 {% block content %}
 <div class="row">
     <div class="col-md-4">
         <div class="master-card-img-wrapper rounded mb-3">
             {% if master.photo %}
-                <img src="{{ master.photo.url }}" class="master-card-img" alt="{{ master.user.get_full_name }}">
+                <img src="{{ master.photo.url }}" class="master-card-img" alt="{{ master.user }}">
             {% else %}
                 <img src="{% static 'img/no-photo.png' %}" class="master-card-img master-card-img-placeholder" alt="Нет фото">
             {% endif %}
         </div>
     </div>
     <div class="col-md-8">
-        <h2>{{ master.user.get_full_name|default:master.user.username }}</h2>
+        <h2>{{ master.user }}</h2>
         {% if master.bio %}
             <p class="text-muted">{{ master.bio }}</p>
         {% endif %}
@@ -60,7 +60,7 @@
                                 class="btn btn-outline-primary px-3 py-2"
                                 data-bs-toggle="modal"
                                 data-bs-target="#bookingActionModal"
-                                data-text="Вы будете записаны на услугу {{ selected_service.name }} к мастеру {{ master.user.get_full_name|default:master.user.username }} на {{ selected_date|date:'d.m.Y' }} в {{ slot|time:'H:i' }}"
+                                data-text="Вы будете записаны на услугу {{ selected_service.name }} к мастеру {{ master.user }} на {{ selected_date|date:'d.m.Y' }} в {{ slot|time:'H:i' }}"
                                 data-bs-time="{{ slot|time:'H:i' }}">
                                 {{ slot|time:'H:i' }}
                             </button>

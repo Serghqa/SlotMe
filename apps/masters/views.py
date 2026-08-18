@@ -17,7 +17,7 @@ Service = apps.get_model('services', 'Service')
 
 
 def master_list_view(request):
-    masters_queryset = Master.objects.filter(is_active=True).prefetch_related('services').order_by('user__username')
+    masters_queryset = Master.objects.filter(is_active=True).prefetch_related('services').order_by('user__first_name')
     page = request.GET.get('page', 1)
     masters_page = get_paginated_page(masters_queryset, page, 5)
 
@@ -88,7 +88,7 @@ def master_detail_view(request, master_id):
 @admin_required
 def admin_master_list_view(request):
     masters_queryset = Master.objects.prefetch_related('services')\
-        .order_by('user__last_name', 'user__first_name')\
+        .order_by('user__first_name')\
             .annotate(services_count=Count('services'))
 
     page = request.GET.get('page', 1)
