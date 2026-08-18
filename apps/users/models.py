@@ -48,7 +48,7 @@ class User(AbstractUser):
         verbose_name_plural = 'Пользователи'
 
     def __str__(self):
-        return f"{self.get_full_name() or self.first_name}"
+        return self.get_full_name() or 'Без имени'
 
     def save(self, *args, **kwargs):
         if self.email:
