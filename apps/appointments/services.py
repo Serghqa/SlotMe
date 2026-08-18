@@ -13,6 +13,9 @@ WorkSchedule = apps.get_model('masters', 'WorkSchedule')
 ScheduleException = apps.get_model('masters', 'ScheduleException')
 Service = apps.get_model('services', 'Service')
 
+SLOT_STEP = 30
+TIMEOUT = 60
+
 
 def get_paginated_page(queryset, page_number, per_page=10):
     """
@@ -44,7 +47,7 @@ def get_available_slots(master: Master, date: date, service: Service):
     exception = ScheduleException.objects.filter(master=master, date=date).first()
     if exception:
         if not exception.is_working:
-            cache.set(cache_key, [], 60)
+            cache.set(cache_key, [], TIMEOUT)
             return []
         start_time = exception.start_time
         end_time = exception.end_time
@@ -56,7 +59,7 @@ def get_available_slots(master: Master, date: date, service: Service):
             is_working=True
         ).first()
         if not schedule:
-            cache.set(cache_key, [], 60)
+            cache.set(cache_key, [], TIMEOUT)
             return []
         start_time = schedule.start_time
         end_time = schedule.end_time
@@ -78,13 +81,13 @@ def get_available_slots(master: Master, date: date, service: Service):
     now_local_datetime = timezone.localtime()
     if date == now_local_datetime.date():
         if start_local_datetime < now_local_datetime:
-            minutes_to_add = 30 - (now_local_datetime.minute % 30)
+            minutes_to_add = SLOT_STEP - (now_local_datetime.minute % SLOT_STEP)
             start_local_datetime = now_local_datetime + timedelta(minutes=minutes_to_add) - \
                 timedelta(seconds=now_local_datetime.second, microseconds=now_local_datetime.microsecond)
 
     duration = service.duration  # timedelta из DurationField
     current = start_local_datetime
-    step = timedelta(minutes=30)
+    step = timedelta(minutes=SLOT_STEP)
 
     while current + duration <= end_local_datetime:
         slot_end = current + duration
@@ -92,7 +95,7 @@ def get_available_slots(master: Master, date: date, service: Service):
             slots.append(current.time())
         current += step
 
-    cache.set(cache_key, slots, 60)
+    cache.set(cache_key, slots, TIMEOUT)
     return slots
 
 
