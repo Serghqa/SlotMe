@@ -23,9 +23,9 @@ class ScheduleExceptionInline(ScheduleInlineMixin, admin.TabularInline):
 class MasterAdmin(admin.ModelAdmin):
     fields = ('user', 'is_active', 'services', 'bio', 'photo')
     list_per_page = 15
-    list_display = ('master_name', 'phone', 'is_active')
+    list_display = ('master_name', 'master_email', 'master_phone', 'is_active')
     list_filter = ('is_active',)
-    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__phone')
+    search_fields = ('user__email', 'user__first_name', 'user__phone')
     filter_horizontal = ('services',)
     inlines = [WorkScheduleInline, ScheduleExceptionInline]
 
@@ -55,12 +55,16 @@ class MasterAdmin(admin.ModelAdmin):
             return ('user',)
         return ()
 
-    @admin.display(description='Мастер', ordering='user__username')
+    @admin.display(description='Мастер', ordering='user__first_name')
     def master_name(self, obj):
-        return obj.user.get_full_name() or obj.user.username
+        return obj.user.get_full_name()
 
-    @admin.display(description='Телефон', ordering='user__username')
-    def phone(self, obj):
+    @admin.display(description='Электронная почта', ordering='user__first_name')
+    def master_email(self, obj):
+        return obj.user.email
+
+    @admin.display(description='Телефон', ordering='user__first_name')
+    def master_phone(self, obj):
         return obj.user.phone
 
     @admin.display(description='Услуги')
@@ -79,7 +83,7 @@ class WorkScheduleAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
     list_filter = ('master__is_active', 'day_of_week', 'is_working', ('master', RelatedOnlyFieldListFilter))
     list_per_page = 15
     list_select_related = ('master__user',)
-    search_fields = ('master__user__username', 'master__user__first_name', 'master__user__last_name')
+    search_fields = ('master__user__first_name', 'master__user__phone', 'master__user__email')
 
 
 @admin.register(ScheduleException)
@@ -88,4 +92,4 @@ class ScheduleExceptionAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
     list_filter = ('master__is_active', 'is_working', 'date', ('master', RelatedOnlyFieldListFilter))
     list_per_page = 15
     list_select_related = ('master__user',)
-    search_fields = ('reason', 'master__user__username', 'master__user__first_name', 'master__user__last_name')
+    search_fields = ('reason', 'master__user__first_name', 'master__user__phone', 'master__user__email')
