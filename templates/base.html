@@ -39,9 +39,9 @@
                         Главная</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'services_list' %}active{% endif %}"
-                            href="{% url 'services:services_list' %}"
-                            {% if request.resolver_match.url_name == 'services_list' %}aria-current="page"{% endif %}>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'service_list' %}active{% endif %}"
+                            href="{% url 'services:service_list' %}"
+                            {% if request.resolver_match.url_name == 'service_list' %}aria-current="page"{% endif %}>
                         Услуги</a>
                     </li>
                     <li class="nav-item">
