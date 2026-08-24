@@ -8,27 +8,48 @@ class LoginForm(AuthenticationForm):
     username = forms.EmailField(
         label='Электронная почта',
         widget=forms.EmailInput(attrs={
-            'id': 'id_email',
-            'class': 'form-control',
             'autofocus': True,
+            'placeholder': 'example@mail.com',
         })
     )
+    password = forms.CharField(
+        label='Пароль',
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Введите пароль',
+        })
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
 
 
 class RegistrationForm(UserCreationForm):
     email = forms.EmailField(
         required=True,
         label='Электронная почта',
+        widget=forms.EmailInput(attrs={
+            'autofocus': True,
+            'placeholder': 'example@mail.com',
+        })
     )
     phone = forms.CharField(
         max_length=20,
         required=True,
         label='Телефон',
+        widget=forms.TextInput(attrs={
+            'placeholder': '+7 (999) 999-99-99',
+        })
     )
     first_name = forms.CharField(
         max_length=30,
         required=True,
         label='Имя',
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Введите имя',
+        })
     )
 
     class Meta:

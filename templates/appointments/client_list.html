@@ -37,7 +37,7 @@
             <tbody>
                 {% for appointment in appointments %}
                     <tr>
-                        <td class="fw-semibold">{{ appointment.master.user.get_full_name|default:appointment.master.user.username }}</td>
+                        <td class="fw-semibold">{{ appointment.master.user }}</td>
                         <td>{{ appointment.service.name|default:"—" }}</td>
                         <td>{{ appointment.start_datetime|date:"d.m.Y H:i" }}</td>
                         <td>

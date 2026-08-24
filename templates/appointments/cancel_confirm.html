@@ -14,7 +14,7 @@
             <div class="card-body">
                 <h5 class="card-title fw-bold mb-3">{{ appointment.service.name }}</h5>
                 <p class="card-text lh-lg mb-0">
-                    <strong>Мастер:</strong> {{ appointment.master.user.get_full_name|default:appointment.master.user.username }}<br>
+                    <strong>Мастер:</strong> {{ appointment.master.user }}<br>
                     <strong>Дата:</strong> {{ appointment.start_datetime|date:"d.m.Y" }}<br>
                     <strong>Время:</strong> {{ appointment.start_datetime|date:"H:i" }}<br>
                     <strong>Стоимость:</strong> <span class="text-primary fw-bold">{{ appointment.service.price }}₽</span>

@@ -24,7 +24,7 @@
             <tbody>
                 {% for master in masters %}
                     <tr>
-                        <td class="fw-semibold">{{ master.user.get_full_name|default:master.user.username }}</td>
+                        <td class="fw-semibold">{{ master.user }}</td>
                         <td class="text-nowrap">{{ master.user.phone|default:"—" }}</td>
                         <td>
                             {% if master.is_active %}

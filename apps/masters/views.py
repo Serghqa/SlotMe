@@ -9,6 +9,7 @@ from django.utils.http import urlencode
 from django.urls import reverse
 from datetime import datetime
 from apps.appointments.services import get_available_slots, get_paginated_page
+from .forms import MasterCreationForm
 from .models import Master
 
 
@@ -101,50 +102,18 @@ def admin_master_list_view(request):
 def admin_master_create_view(request):
     redirect_to = request.POST.get('next') or request.GET.get('next') or reverse('masters:admin_list')
 
-    def redirect_with_error():
-        base_url = reverse('masters:admin_create')
-        query_string = urlencode({'next': redirect_to})
-
-        return redirect(f"{base_url}?{query_string}")
-
     if request.method == 'POST':
-        username = request.POST.get('username')
-        service_ids = request.POST.getlist('services')
-
-        # Проверки
-        if not username:
-            messages.error(request, 'Логин обязателен.')
-            return redirect_with_error()
-
-        user = User.objects.filter(username=username).first()
-        if not user:
-            messages.error(request, 'Пользователя с таким логином не существует.')
-            return redirect_with_error()
-
-        if user.appointments.exists():
-            messages.error(request, 'Это активный пользователь сервиса.')
-            return redirect_with_error()
-
-        if user.is_admin:
-            messages.error(request, 'Администратора нельзя сделать мастером.')
-            return redirect_with_error()
-
-        if Master.objects.filter(user=user).exists():
-            messages.error(request, 'Такой мастер уже существует.')
-            return redirect_with_error()
-
-        # Создаём профиль мастера
-        master = Master.objects.create(user=user)
-
-        # Назначаем услуги
-        if service_ids:
-            master.services.set(service_ids)
-
-        messages.success(request, f'Мастер {user.get_full_name() or username} создан.')
-        return redirect(redirect_to)
+        form = MasterCreationForm(request.POST)
+        if form.is_valid():
+            master = form.save()
+            messages.success(request, f'Мастер {master.user} успешно создан.')
+            return redirect(redirect_to)
+    else:
+        form = MasterCreationForm()
 
     services = Service.objects.filter(is_active=True)
     context = {
+        'form': form,
         'services': services,
         'back_masters_url': redirect_to,
     }
@@ -159,7 +128,7 @@ def admin_master_toggle_active_view(request, master_id):
     master.is_active = not master.is_active
     master.save()
     status = 'разблокирован' if master.is_active else 'заблокирован'
-    messages.success(request, f'Мастер {master.user.get_full_name() or master.user.username} {status}.')
+    messages.success(request, f'Мастер {master.user} {status}.')
 
     redirect_to = request.POST.get('next') or reverse('masters:admin_list')
 

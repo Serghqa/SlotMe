@@ -96,10 +96,9 @@ def book_appointment_view(request, master_id):
     # Сбрасываем кэш слотов
     invalidate_slots_cache(master, start_datetime.date())
 
-    master_name = master.user.get_full_name() or master.user.username
     messages.success(
         request,
-        f'Вы записаны к {master_name} '
+        f'Вы записаны к {master.user} '
         f'на {start_datetime:%d.%m.%Y} в {start_datetime:%H:%M}.'
     )
     return redirect('appointments:client_list')
@@ -165,6 +164,7 @@ def client_cancel_appointment_view(request, appointment_id):
             reason = reason[:500]
         appointment.status = 'cancelled'
         appointment.cancel_reason = reason
+        appointment.cancelled_at = timezone.now()
         appointment.save()
 
         # Инвалидация кэша
@@ -315,6 +315,7 @@ def admin_cancel_appointment_view(request, appointment_id):
             reason = reason[:500]
         appointment.status = 'cancelled'
         appointment.cancel_reason = reason
+        appointment.cancelled_at = timezone.now()
         appointment.save()
 
         invalidate_slots_cache(appointment.master, appointment.start_datetime.date())
