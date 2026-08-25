@@ -8,4 +8,4 @@ def service_list_view(request):
     page = request.GET.get('page', 1)
     services_page = get_paginated_page(services_queryset, page, 5)
 
-    return render(request, 'services/service_list.html', {'services': services_page})
+    return render(request, 'services/service_list.html', {'services': services_page, 'role': 'client'})

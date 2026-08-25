@@ -34,7 +34,7 @@
                 <a href="{% url 'appointments:master_schedule' %}" class="btn btn-outline-primary">📅 Моё расписание</a>
             {% elif user.is_admin %}
                 <a href="{% url 'appointments:admin_list' %}" class="btn btn-outline-primary">Все записи</a>
-                <a href="{% url 'masters:admin_list' %}" class="btn btn-outline-primary">Управление мастерами</a>
+                <a href="{% url 'masters:admin_list' %}" class="btn btn-outline-primary">Все мастера</a>
             {% else %}
                 <a href="{% url 'appointments:client_list' %}" class="btn btn-outline-primary">📝 Мои записи</a>
             {% endif %}

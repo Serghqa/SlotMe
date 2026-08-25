@@ -55,12 +55,18 @@
                     {% if user.is_authenticated %}
                         {% if user.is_master %}
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'appointments:master_schedule' %}">Расписание</a>
+                                <a class="nav-link {% if request.resolver_match.url_name == 'master_schedule' %}active{% endif %}"
+                                    href="{% url 'appointments:master_schedule' %}"
+                                    {% if request.resolver_match.url_name == 'master_schedule' %}aria-current="page"{% endif %}>
+                                Расписание</a>
                             </li>
                         {% endif %}
                         {% if not user.is_master and not user.is_admin %}
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'appointments:client_list' %}">Мои записи</a>
+                                <a class="nav-link {% if request.resolver_match.url_name == 'client_list' %}active{% endif %}"
+                                    href="{% url 'appointments:client_list' %}"
+                                    {% if request.resolver_match.url_name == 'client_list' %}aria-current="page"{% endif %}>
+                                Мои записи</a>
                             </li>
                         {% endif %}
                         {% if user.is_admin %}
@@ -70,13 +76,16 @@
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li><a class="dropdown-item" href="{% url 'appointments:admin_list' %}">Все записи</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'masters:admin_list' %}">Управление мастерами</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'masters:admin_list' %}">Все мастера</a></li>
                                 </ul>
                             </li>
                         {% endif %}
                         <!-- Профиль и Выход -->
                         <li class="nav-item">
-                            <a class="nav-link fw-bold" href="{% url 'users:profile' %}">{{ user }}</a>
+                            <a class="nav-link fw-bold {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
+                                href="{% url 'users:profile' %}"
+                                {% if request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>
+                            {{ user }}</a>
                         </li>
                         <li class="nav-item">
                             <form method="post" action="{% url 'users:logout' %}" class="d-inline">
@@ -87,10 +96,16 @@
                     {% else %}
                         <!-- Ссылки для гостей -->
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'users:register' %}">Зарегистрироваться</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'register' %}active{% endif %}"
+                                href="{% url 'users:register' %}"
+                                {% if request.resolver_match.url_name == 'register' %}aria-current="page"{% endif %}>
+                            Зарегистрироваться</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'users:login' %}">Войти</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'login' %}active{% endif %}"
+                                href="{% url 'users:login' %}"
+                                {% if request.resolver_match.url_name == 'login' %}aria-current="page"{% endif %}>
+                            Войти</a>
                         </li>
                     {% endif %}
                 </ul>

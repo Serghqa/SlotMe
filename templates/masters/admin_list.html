@@ -1,12 +1,11 @@
 {% extends "base.html" %}
 {% load url_tags %}
 
-{% block title %}Управление мастерами — SlotMe{% endblock title %}
+{% block title %}Мастера — SlotMe{% endblock title %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0 fw-bold">Управление мастерами</h2>
-    <a href="{% url 'masters:admin_create' %}?next={{ request.get_full_path }}" class="btn btn-primary px-4">+ Добавить мастера</a>
+    <h2 class="mb-0 fw-bold">Все мастера</h2>
 </div>
 
 {% if masters %}
@@ -18,13 +17,14 @@
                     <th>Телефон</th>
                     <th>Статус</th>
                     <th style="min-width: 140px;">Услуги</th>
-                    <th style="min-width: 140px;">Действия</th>
                 </tr>
             </thead>
             <tbody>
                 {% for master in masters %}
                     <tr>
-                        <td class="fw-semibold">{{ master.user }}</td>
+                        <td>
+                            <a href="#" class="btn btn-sm btn-outline-secondary">{{ master.user }}</a>
+                        </td>
                         <td class="text-nowrap">{{ master.user.phone|default:"—" }}</td>
                         <td>
                             {% if master.is_active %}
@@ -34,26 +34,9 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if master.is_active %}
-                                <a href="{% url 'masters:admin_services' master.id %}?next={{ request.get_full_path }}" class="btn btn-sm btn-outline-primary">
-                                    ⚙️ Изменить ({{ master.services_count|default:master.services.all.count }})
-                                </a>
-                            {% else %}
-                                <span class="text-muted small">--</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <form method="post" action="{% url 'masters:admin_toggle' master.id %}">
-                                {% csrf_token %}
-
-                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-
-                                {% if master.is_active %}
-                                    <button type="submit" class="btn btn-sm btn-outline-warning w-100">Заблокировать</button>
-                                {% else %}
-                                    <button type="submit" class="btn btn-sm btn-outline-success w-100">Разблокировать</button>
-                                {% endif %}
-                            </form>
+                            <a href="{% url 'masters:admin_services' master.id %}?next={{ request.get_full_path }}" class="btn btn-sm btn-outline-primary">
+                                Посмотреть ({{ master.services_count|default:master.services.all.count }})
+                            </a>
                         </td>
                     </tr>
                 {% endfor %}

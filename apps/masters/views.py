@@ -9,7 +9,6 @@ from django.utils.http import urlencode
 from django.urls import reverse
 from datetime import datetime
 from apps.appointments.services import get_available_slots, get_paginated_page
-from .forms import MasterCreationForm
 from .models import Master
 
 
@@ -32,7 +31,7 @@ def master_service_list_view(request, service_id):
         is_active=True
     )
     masters = service.masters.filter(is_active=True).prefetch_related('services')
-    back_services_url = request.META.get('HTTP_REFERER', reverse('services:services_list'))
+    back_services_url = request.META.get('HTTP_REFERER', reverse('services:service_list'))
     context = {
         'masters': masters,
         'selected_service': service,
@@ -99,59 +98,22 @@ def admin_master_list_view(request):
 
 
 @admin_required
-def admin_master_create_view(request):
-    redirect_to = request.POST.get('next') or request.GET.get('next') or reverse('masters:admin_list')
-
-    if request.method == 'POST':
-        form = MasterCreationForm(request.POST)
-        if form.is_valid():
-            master = form.save()
-            messages.success(request, f'Мастер {master.user} успешно создан.')
-            return redirect(redirect_to)
-    else:
-        form = MasterCreationForm()
-
-    services = Service.objects.filter(is_active=True)
-    context = {
-        'form': form,
-        'services': services,
-        'back_masters_url': redirect_to,
-    }
-    return render(request, 'masters/admin_create.html', context)
-
-
-@admin_required
-@require_POST
-def admin_master_toggle_active_view(request, master_id):
-    master = get_object_or_404(Master, id=master_id)
-
-    master.is_active = not master.is_active
-    master.save()
-    status = 'разблокирован' if master.is_active else 'заблокирован'
-    messages.success(request, f'Мастер {master.user} {status}.')
-
-    redirect_to = request.POST.get('next') or reverse('masters:admin_list')
-
-    return redirect(redirect_to)
-
-
-@admin_required
 def admin_master_services(request, master_id):
-    master = get_object_or_404(Master, id=master_id)
+    master = get_object_or_404(
+        Master.objects.prefetch_related('services'),
+        id=master_id,
+        is_active=True
+    )
+    services_queryset = master.services.filter(is_active=True)
+    page = request.GET.get('page', 1)
+    services_page = get_paginated_page(services_queryset, page, 5)
 
-    redirect_to = request.POST.get('next') or request.GET.get('next') or reverse('masters:admin_list')
+    redirect_to = request.GET.get('next') or reverse('masters:admin_list')
 
-    if request.method == 'POST':
-        selected_service_ids = request.POST.getlist('services')
-        master.services.set(selected_service_ids)
-
-        messages.success(request, f"Услуги мастера {master} успешно обновлены.")
-        return redirect(redirect_to)
-
-    all_services = Service.objects.all()
     context = {
         'master': master,
-        'all_services': all_services,
+        'services': services_page,
         'back_masters_url': redirect_to,
+        'role': 'admin',
     }
-    return render(request, 'masters/admin_services.html', context)
+    return render(request, 'services/service_list.html', context)
