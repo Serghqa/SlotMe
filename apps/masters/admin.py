@@ -79,17 +79,30 @@ class MasterAdmin(admin.ModelAdmin):
 
 @admin.register(WorkSchedule)
 class WorkScheduleAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
+    fields = ('master', 'day_of_week', 'start_time', 'end_time', 'is_working')
     list_display = ('master', 'day_of_week', 'start_time', 'end_time', 'is_working')
     list_filter = ('master__is_active', 'day_of_week', 'is_working', ('master', RelatedOnlyFieldListFilter))
     list_per_page = 15
     list_select_related = ('master__user',)
     search_fields = ('master__user__first_name', 'master__user__phone', 'master__user__email')
 
+    def get_readonly_fields(self, request, obj=None):
+        """Если объект редактируется, делаем поле 'master' доступным только для чтения."""
+        if obj:
+            return ('master',)
+        return ()
+
 
 @admin.register(ScheduleException)
 class ScheduleExceptionAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
+    fields = ('master', 'date', 'is_working', 'start_time', 'end_time', 'reason')
     list_display = ('master', 'date', 'is_working', 'start_time', 'end_time', 'reason')
     list_filter = ('master__is_active', 'is_working', 'date', ('master', RelatedOnlyFieldListFilter))
     list_per_page = 15
     list_select_related = ('master__user',)
     search_fields = ('reason', 'master__user__first_name', 'master__user__phone', 'master__user__email')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ('master',)
+        return ()
