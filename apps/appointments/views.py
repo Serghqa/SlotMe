@@ -146,14 +146,13 @@ def client_cancel_appointment_view(request, appointment_id):
         Appointment,
         id=appointment_id,
         client=request.user,
-        status='booked'
     )
 
     if not appointment.can_be_cancelled:
         if appointment.is_past:
             messages.error(request, 'Нельзя отменить прошедшую запись.')
         else:
-            messages.error(request, 'Можно отменить только активную (забронированную) запись.')
+            messages.error(request, 'Можно отменить только активную (забронированную) запись либо запись уже отменена.')
         return redirect('appointments:client_list')
 
     if request.method == 'POST':
@@ -295,7 +294,6 @@ def admin_cancel_appointment_view(request, appointment_id):
     appointment = get_object_or_404(
         Appointment.objects.select_related('master'),
         id=appointment_id,
-        status='booked'
     )
     redirect_url = reverse('appointments:admin_list')
     query_params = request.GET.dict()
@@ -307,7 +305,7 @@ def admin_cancel_appointment_view(request, appointment_id):
             if appointment.is_past:
                 messages.error(request, 'Нельзя отменить прошедшую запись.')
             else:
-                messages.error(request, 'Можно отменить только активную (забронированную) запись.')
+                messages.error(request, 'Можно отменить только активную (забронированную) запись либо запись уже отменена.')
             return redirect(redirect_url)
 
         reason = request.POST.get('reason', '').strip()
