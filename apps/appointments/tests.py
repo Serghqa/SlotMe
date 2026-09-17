@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import urlencode
 from datetime import time, timedelta, datetime
 from unittest.mock import PropertyMock, patch
 from zoneinfo import ZoneInfo
@@ -26,16 +27,21 @@ class AppointmentBookingTestCase(TestCase):
 
     def setUp(self):
         """Создаем базовое окружение для тестов"""
+        self.admin_user = User.objects.create_superuser(
+            email='admin@test.com',
+            phone='+79990000003',
+            first_name='Админ',
+        )
         # Пользователи
         self.client_user = User.objects.create(
-            username='test_client',
             email='client@example.com',
-            phone='+79990000001'
+            phone='+79990000001',
+            first_name='Клиент',
         )
         self.master_user = User.objects.create(
-            username='test_master',
             email='master@example.com',
-            phone='+79990000002'
+            phone='+79990000002',
+            first_name='Мастер'
         )
         self.master = Master.objects.create(user=self.master_user)
 
@@ -160,9 +166,9 @@ class AppointmentBookingTestCase(TestCase):
     def test_master_without_schedule_denied(self):
         """Запись к мастеру без расписания запрещена"""
         user_master = User.objects.create(
-            username='user_master_no_schedule',
             email='nosched@example.com',
-            phone='+79990000006'
+            phone='+79990000006',
+            first_name='Мастер',
         )
         master_no_schedule = Master.objects.create(user=user_master)
         master_no_schedule.services.add(self.service)
@@ -500,9 +506,9 @@ class AppointmentBookingTestCase(TestCase):
         """Разные мастера могут иметь записи на одно время"""
         # Второй мастер
         user_master_2 = User.objects.create(
-            username='master2',
             email='master2@example.com',
-            phone='+79990000003'
+            phone='+79990000003',
+            first_name='Мастер 2',
         )
         master2 = Master.objects.create(user=user_master_2)
         master2.services.add(self.service)
@@ -1022,6 +1028,7 @@ class AppointmentBookingTestCase(TestCase):
         saturday = self.monday + timedelta(days=5)
 
         # На всякий случай проверяем, что без исключений там пусто
+        invalidate_slots_cache(self.master, saturday)
         slots_before = get_available_slots(self.master, saturday, self.service)
         self.assertEqual(slots_before, [])
 
@@ -1097,8 +1104,15 @@ class AppointmentBookingTestCase(TestCase):
             'time': ''  # Пустое время
         })
 
+        base_url = reverse('masters:master_detail', kwargs={'master_id': self.master.id})
+        query_params = urlencode({
+            'service_id': self.service.id,
+            'date': self.monday.strftime('%Y-%m-%d')
+        })
+        expected_url = f"{base_url}?{query_params}"
+
         # Вьюха должна вернуть нас на страницу деталей мастера
-        self.assertRedirects(response, reverse('masters:master_detail', kwargs={'master_id': self.master.id}))
+        self.assertRedirects(response, expected_url)
 
         # Проверяем, что в сессию упала ошибка
         messages = list(get_messages(response.wsgi_request))
@@ -1181,7 +1195,11 @@ class AppointmentBookingTestCase(TestCase):
     def test_security_cannot_cancel_someone_elses_appointment(self):
         """Безопасность: Клиент не может открыть или отменить запись другого пользователя (404)"""
         # Создаем другого пользователя, который станет владельцем записи
-        other_user = User.objects.create(username='other_client', email='other@example.com')
+        other_user = User.objects.create(
+            email='other@example.com',
+            phone='+79990000004',
+            first_name='Другой Клиент'
+        )
         appointment = Appointment.objects.create(
             client=other_user,
             master=self.master,
@@ -1230,10 +1248,6 @@ class AppointmentBookingTestCase(TestCase):
             appointment.refresh_from_db()
             self.assertEqual(appointment.status, 'booked')
 
-
-
-
-
     # --- ТЕСТЫ MASTER_SCHEDULE_VIEW ---
 
     def test_schedule_default_date_is_today(self):
@@ -1256,14 +1270,15 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_update_status_requires_post(self):
         """GET запрос на изменение статуса возвращает 405 Method Not Allowed."""
-        self.client.force_login(self.master_user)
-        url = reverse('appointments:update_status', kwargs={'appointment_id': 1})
+        self.client.force_login(self.admin_user)
+        url = reverse('appointments:admin_update_status', kwargs={'appointment_id': 1})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 405)
 
+
     def test_cannot_update_future_appointment(self):
         """Нельзя изменить статус записи, если время ее окончания (end_datetime) еще не наступило."""
-        self.client.force_login(self.master_user)
+        self.client.force_login(self.admin_user)
 
         # Создаем запись в будущем
         future_start = timezone.localtime() + timedelta(days=2)
@@ -1273,7 +1288,7 @@ class AppointmentBookingTestCase(TestCase):
         )
         appointment.save()
 
-        url = reverse('appointments:update_status', kwargs={'appointment_id': appointment.id})
+        url = reverse('appointments:admin_update_status', kwargs={'appointment_id': appointment.id})
         response = self.client.post(url, {'status': 'completed'})
 
         self.assertEqual('Нельзя изменить статус будущей записи.', list(get_messages(response.wsgi_request))[0].message)
@@ -1283,7 +1298,7 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_successful_status_update_to_completed(self):
         """Успешный перевод завершенной записи в статус 'completed'."""
-        self.client.force_login(self.master_user)
+        self.client.force_login(self.admin_user)
 
         # Создаем запись в прошлом
         past_start = timezone.localtime() - timedelta(hours=5)
@@ -1293,7 +1308,7 @@ class AppointmentBookingTestCase(TestCase):
         )
         appointment.save()
 
-        url = reverse('appointments:update_status', kwargs={'appointment_id': appointment.id})
+        url = reverse('appointments:admin_update_status', kwargs={'appointment_id': appointment.id})
         response = self.client.post(url, {'status': 'completed'})
 
         appointment.refresh_from_db()
@@ -1302,7 +1317,7 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_invalid_status_value_triggers_error(self):
         """Передача невалидного статуса не меняет запись и выводит ошибку."""
-        self.client.force_login(self.master_user)
+        self.client.force_login(self.admin_user)
 
         past_start = timezone.localtime() - timedelta(hours=3)
         appointment = Appointment.objects.create(
@@ -1311,7 +1326,7 @@ class AppointmentBookingTestCase(TestCase):
         )
         appointment.save()
 
-        url = reverse('appointments:update_status', kwargs={'appointment_id': appointment.id})
+        url = reverse('appointments:admin_update_status', kwargs={'appointment_id': appointment.id})
         response = self.client.post(url, {'status': 'invalid_status_choice'})
 
         appointment.refresh_from_db()
