@@ -12,9 +12,10 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Django Debug Toolbar
 INSTALLED_APPS += ['debug_toolbar']
-MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
-# INTERNAL_IPS = ['127.0.0.1']
-INTERNAL_IPS = ['*']
+# Ставим toolbar после SecurityMiddleware (требование django-debug-toolbar)
+MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+INTERNAL_IPS = ['127.0.0.1']
+# INTERNAL_IPS = ['*']
 
 # Логирование в консоль
 # LOGGING = {

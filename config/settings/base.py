@@ -37,11 +37,11 @@ DJANGO_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_extensions',
 ]
 
 THIRD_PARTY_APPS = [
     'phonenumber_field',
+    'django_extensions',
     # 'allauth',
     # 'allauth.account',
     # 'allauth.socialaccount',
@@ -149,16 +149,20 @@ USE_I18N = True
 USE_TZ = True
 
 
+# PhoneNumberField default
+PHONENUMBER_DEFAULT_REGION = 'RU'
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 # Статика
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Медиа
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -167,7 +171,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': config('REDIS_URL', default=config('REDIS_URL')),
+        'LOCATION': config('REDIS_URL'),
     }
 }
 
