@@ -8,7 +8,7 @@ from apps.users.forms import RegistrationForm
 User = get_user_model()
 Master = apps.get_model('masters', 'Master')
 
-class UserWorkflowTestCase(TestCase):
+class UserTestCase(TestCase):
 
     def setUp(self):
         """Выполняется ПЕРЕД КАЖДЫМ тестом в этом классе."""

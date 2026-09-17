@@ -11,7 +11,7 @@ from .models import Master, WorkSchedule, ScheduleException
 User = get_user_model()
 Service = apps.get_model('services', 'Service')
 
-class MasterBusinessLogicTestCase(TestCase):
+class MasterTestCase(TestCase):
 
     def setUp(self):
         """Готовим услуги и мастеров для тестов расписания и связей."""
@@ -24,10 +24,10 @@ class MasterBusinessLogicTestCase(TestCase):
         self.users = []
 
         for i in range(1, 9):
-            # ОБЯЗАТЕЛЬНО передаем уникальный email, так как поле уникально в БД
             user = User.objects.create(
-                username=f'User_{i}',
-                email=f'email_{i}@example.com',
+                email=f'User_{i}@example.com',
+                phone=f'+7999000{i:04d}',
+                first_name=f'Имя_{i}',
             )
             user.save()
             self.users.append(user)
@@ -70,10 +70,10 @@ class MasterBusinessLogicTestCase(TestCase):
 
     def test_cascade_delete_flow(self):
         """Проверяем каскадное удаление (Услуга должна жить при удалении юзера)."""
-        # Создаем отдельного пользователя с уникальным email
         user = User.objects.create(
-            username='delete_test_user',
             email='delete_test_user@example.com',
+            phone='+79990009999',
+            first_name='Delete Test User'
         )
         master = Master.objects.create(user=user)
         # Берем ОДНУ конкретную услугу из пула
@@ -215,8 +215,9 @@ class MasterBusinessLogicTestCase(TestCase):
     def test_cannot_create_duplicate_master_for_user(self):
         """Проверяем, что нельзя создать двух мастеров для одного пользователя."""
         user = User.objects.create(
-            username='test_user',
-            email='test_user@example.com'
+            email='test_user@example.com',
+            phone='+79990009999',
+            first_name='Test User'
         )
 
         # Создаем первого мастера
@@ -235,8 +236,9 @@ class MasterBusinessLogicTestCase(TestCase):
     def test_cannot_create_master_with_existing_master_profile(self):
         """Проверяем через hasattr и связанный объект."""
         user = User.objects.create(
-            username='another_user',
-            email='another_user@example.com'
+            email='another_user@example.com',
+            phone='+79990008888',
+            first_name='Another User'
         )
 
         # Создаем мастера
