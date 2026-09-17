@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load url_tags %}
 
 {% block title %}Расписание — SlotMe{% endblock title %}
 
@@ -25,12 +26,12 @@
 </div>
 
 {% if appointments %}
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead>
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
                 <tr>
-                    <th>Время</th>
                     <th>Клиент</th>
+                    <th>Время</th>
                     <th>Телефон</th>
                     <th>Услуга</th>
                     <th>Стоимость</th>
@@ -40,13 +41,11 @@
             <tbody>
                 {% for appointment in appointments %}
                     <tr>
+                        <td class="fw-semibold">{{ appointment.client|default:"Клиент" }}</td>
                         <td class="text-nowrap">{{ appointment.start_datetime|date:"H:i" }} — {{ appointment.end_datetime|date:"H:i" }}</td>
-                        <td>{{ appointment.client.get_full_name|default:appointment.client.username }}</td>
                         <td class="text-nowrap">{{ appointment.client.phone|default:"—" }}</td>
                         <td>{{ appointment.service.name }}</td>
                         <td>{{ appointment.service.price }}₽</td>
-
-                        <!-- Колонка со статусом в стиле клиентского шаблона -->
                         <td>
                             {% if appointment.status == 'booked' %}
                                 {% if appointment.end_datetime < now %}
@@ -67,8 +66,11 @@
             </tbody>
         </table>
     </div>
+    <!-- 2. БЛОК ПАГИНАЦИИ BOOTSTRAP -->
+    {% render_pagination appointments %}
+
 {% else %}
-    <div class="alert alert-info shadow-sm">
+    <div class="alert alert-info mb-3 shadow-sm">
         <p class="mb-0">На этот день записей нет.</p>
     </div>
 {% endif %}

@@ -10,7 +10,7 @@
 <form method="get" class="row g-3 mb-4 align-items-end">
     <div class="col-sm-6 col-md-3">
         <label for="date" class="form-label small fw-bold">Дата</label>
-        <input type="date" name="date" id="date" class="form-control" value="{{ selected_date }}">
+        <input type="date" name="date" id="date" class="form-control" value="{{ selected_date|default:'' }}">
     </div>
     <div class="col-sm-6 col-md-3">
         <label for="master" class="form-label small fw-bold">Мастер</label>
@@ -18,7 +18,7 @@
             <option value="">Все мастера</option>
             {% for master in masters %}
                 <option value="{{ master.id }}" {% if selected_master == master.id|stringformat:"s" %}selected{% endif %}>
-                    {{ master.user.get_full_name|default:master.user.username }}
+                    {{ master.user|default:"Мастер" }}
                 </option>
             {% endfor %}
         </select>
@@ -49,7 +49,8 @@
             <thead class="table-light">
                 <tr>
                     <th style="width: 70px;">ID</th>
-                    <th>Дата и время</th>
+                    <th>Дата</th>
+                    <th>Время</th>
                     <th>Клиент</th>
                     <th>Мастер</th>
                     <th>Услуга</th>
@@ -62,9 +63,10 @@
                 {% for appointment in appointments %}
                     <tr>
                         <td class="text-muted">#{{ appointment.id }}</td>
-                        <td>{{ appointment.start_datetime|date:"d.m.Y H:i" }}</td>
-                        <td class="fw-semibold">{{ appointment.client.get_full_name|default:appointment.client.username }}</td>
-                        <td>{{ appointment.master.user.get_full_name|default:appointment.master.user.username }}</td>
+                        <td>{{ appointment.start_datetime|date:"d.m.Y" }}</td>
+                        <td>{{ appointment.start_datetime|date:"H:i" }}</td>
+                        <td>{{ appointment.client|default:"Клиент" }}</td>
+                        <td>{{ appointment.master.user|default:"Мастер" }}</td>
                         <td>{{ appointment.service.name|default:"—" }}</td>
                         <td class="fw-bold text-primary">{{ appointment.service.price|default:"—" }}₽</td>
                         <td>

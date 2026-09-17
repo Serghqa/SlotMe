@@ -92,7 +92,7 @@ def admin_master_list_view(request):
             .annotate(services_count=Count('services'))
 
     page = request.GET.get('page', 1)
-    masters_page = get_paginated_page(masters_queryset, page, 2)
+    masters_page = get_paginated_page(masters_queryset, page, 3)
 
     return render(request, 'masters/admin_list.html', {'masters': masters_page})
 

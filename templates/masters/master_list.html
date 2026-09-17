@@ -31,7 +31,7 @@
                         {% if master.photo %}
                             <img src="{{ master.photo.url }}"
                                 class="master-card-img"
-                                alt="{{ master.user }}">
+                                alt="{{ master.user|default:'Мастер' }}">
                         {% else %}
                             <img src="{% static 'img/no-photo.png' %}"
                                 class="master-card-img master-card-img-placeholder"
@@ -39,7 +39,7 @@
                         {% endif %}
                     </div>
                     <div class="card-body d-flex flex-column">
-                        <h5 class="card-title fw-bold">{{ master.user }}</h5>
+                        <h5 class="card-title fw-bold">{{ master.user|default:"Мастер" }}</h5>
                         {% if master.bio %}
                             <p class="card-text text-muted small flex-grow-1">
                                 {{ master.bio|truncatewords:15 }}

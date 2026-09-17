@@ -121,7 +121,7 @@ def client_appointments_view(request):
         # Либо статус все еще 'booked', но время окончания приема (start_datetime + duration) УЖЕ В ПРОШЛОМ
         appointments_queryset = appointments_queryset.filter(
             Q(status__in=['completed', 'cancelled', 'no_show']) |
-            Q(status='booked', end_datetime__lt=now)
+            Q(status='booked', start_datetime__lt=now)
         )
     else:
         appointments_queryset = appointments_queryset.filter(
@@ -195,10 +195,12 @@ def master_schedule_view(request):
 
     master = request.user.master_profile
 
-    appointments = Appointment.objects.filter(
+    appointments_queryset = Appointment.objects.filter(
         master=master,
         start_datetime__date=selected_date,
     ).select_related('client', 'service').order_by('start_datetime')
+    page = request.GET.get('page', 1)
+    appointments = get_paginated_page(appointments_queryset, page, 10)
 
     now = timezone.localtime()
 

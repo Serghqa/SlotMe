@@ -29,21 +29,25 @@
                 <tr>
                     <th>Мастер</th>
                     <th>Услуга</th>
-                    <th>Дата и время</th>
+                    <th>Дата</th>
+                    <th>Время</th>
                     <th>Статус</th>
-                    <th>Действие</th>
+                    {% if current_tab == 'upcoming' %}
+                        <th>Действие</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for appointment in appointments %}
                     <tr>
-                        <td class="fw-semibold">{{ appointment.master.user }}</td>
+                        <td class="fw-semibold">{{ appointment.master.user|default:"Мастер" }}</td>
                         <td>{{ appointment.service.name|default:"—" }}</td>
-                        <td>{{ appointment.start_datetime|date:"d.m.Y H:i" }}</td>
+                        <td class="text-nowrap">{{ appointment.start_datetime|date:"d.m.Y" }}</td>
+                        <td class="text-nowrap">{{ appointment.start_datetime|date:"H:i" }} — {{ appointment.end_datetime|date:"H:i" }}</td>
                         <td>
                             {% if appointment.status == 'booked' %}
                                 {% if appointment.is_past %}
-                                    <span class="badge bg-secondary">Завершена (ожидает подтверждения)</span>
+                                    <span class="badge bg-secondary">Ожидает подтверждения</span>
                                 {% else %}
                                     <span class="badge bg-primary">Забронирована</span>
                                 {% endif %}
@@ -55,15 +59,17 @@
                                 <span class="badge bg-warning">Неявка</span>
                             {% endif %}
                         </td>
-                        <td>
-                            {% if appointment.can_be_cancelled %}
-                                <a href="{% url 'appointments:cancel' appointment.id %}" class="btn btn-sm btn-outline-danger">
-                                    Отменить
-                                </a>
-                            {% else %}
-                                <span class="text-muted small">—</span>
-                            {% endif %}
-                        </td>
+                        {% if current_tab == 'upcoming' %}
+                            <td>
+                                {% if appointment.can_be_cancelled %}
+                                    <a href="{% url 'appointments:cancel' appointment.id %}" class="btn btn-sm btn-outline-danger">
+                                        Отменить
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+                        {% endif %}
                     </tr>
                 {% endfor %}
             </tbody>
