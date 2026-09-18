@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 from .utils import WorkingHoursMixin
 
 
@@ -38,7 +39,7 @@ class Master(models.Model):
         verbose_name_plural = 'Мастера'
 
     def __str__(self):
-        return self.user.get_full_name() or 'Без имени'
+        return self.user.first_name or self.user.email
 
 
 class WorkSchedule(WorkingHoursMixin, models.Model):
@@ -59,12 +60,17 @@ class WorkSchedule(WorkingHoursMixin, models.Model):
     )
     start_time = models.TimeField(verbose_name='Начало работы', blank=True, null=True)
     end_time = models.TimeField(verbose_name='Конец работы', blank=True, null=True)
-    day_of_week = models.IntegerField(choices=DAY_CHOICES, verbose_name='День недели')
+    day_of_week = models.PositiveSmallIntegerField(
+        choices=DAY_CHOICES,
+        validators=[MinValueValidator(0), MaxValueValidator(6)],
+        verbose_name='День недели'
+    )
     is_working = models.BooleanField(default=True, verbose_name='Рабочий день')
 
     class Meta:
         verbose_name = 'Рабочее расписание'
         verbose_name_plural = 'Рабочие расписания'
+        ordering = ['master', 'day_of_week']
         unique_together = ('master', 'day_of_week')
 
     def clean(self):
@@ -72,7 +78,9 @@ class WorkSchedule(WorkingHoursMixin, models.Model):
         self.clean_working_hours()
 
     def __str__(self):
-        return f"{self.master} — {self.get_day_of_week_display()}: {self.start_time}–{self.end_time}"
+        if not self.is_working:
+            return f"{self.master} — {self.get_day_of_week_display()}: выходной"
+        return f"{self.master} — {self.get_day_of_week_display()}: {self.start_time:%H:%M}–{self.end_time:%H:%M}"
 
 
 class ScheduleException(WorkingHoursMixin, models.Model):
@@ -95,6 +103,7 @@ class ScheduleException(WorkingHoursMixin, models.Model):
     class Meta:
         verbose_name = 'Исключение в расписании'
         verbose_name_plural = 'Исключения в расписании'
+        ordering = ['master', '-date']
         unique_together = ('master', 'date')
 
     def clean(self):
