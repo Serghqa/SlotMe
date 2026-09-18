@@ -30,12 +30,17 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
 
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Суперпользователь должен иметь is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Суперпользователь должен иметь is_superuser=True.')
+
         return self.create_user(email, first_name, phone, password, **extra_fields)
 
 class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True, verbose_name='Электронная почта')
-    phone = PhoneNumberField(region='RU', verbose_name='Телефон')
+    phone = PhoneNumberField(verbose_name='Телефон')
     first_name = models.CharField(max_length=30, verbose_name='Имя')
 
     USERNAME_FIELD = 'email'
@@ -58,7 +63,3 @@ class User(AbstractUser):
     @property
     def is_master(self):
         return hasattr(self, 'master_profile') and self.master_profile.is_active
-
-    @property
-    def is_admin(self):
-        return self.is_staff or self.is_superuser

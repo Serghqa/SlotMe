@@ -38,7 +38,7 @@ def book_appointment_view(request, master_id):
     if request.method != 'POST':
         return get_redirect_response()
 
-    if request.user.is_master or request.user.is_admin:
+    if request.user.is_master or request.user.is_staff:
         messages.error(request, 'Только клиенты могут записываться на приём.')
         return get_redirect_response()
 

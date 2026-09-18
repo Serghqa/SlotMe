@@ -61,7 +61,7 @@
                                 Расписание</a>
                             </li>
                         {% endif %}
-                        {% if not user.is_master and not user.is_admin %}
+                        {% if not user.is_master and not user.is_staff %}
                             <li class="nav-item">
                                 <a class="nav-link {% if request.resolver_match.url_name == 'client_list' %}active{% endif %}"
                                     href="{% url 'appointments:client_list' %}"
@@ -69,7 +69,7 @@
                                 Мои записи</a>
                             </li>
                         {% endif %}
-                        {% if user.is_admin %}
+                        {% if user.is_staff %}
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Админ-панель

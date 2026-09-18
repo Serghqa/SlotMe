@@ -64,7 +64,7 @@ class WorkSchedule(WorkingHoursMixin, models.Model):
 
     class Meta:
         verbose_name = 'Рабочее расписание'
-        verbose_name_plural = 'Рабочее расписание'
+        verbose_name_plural = 'Рабочие расписания'
         unique_together = ('master', 'day_of_week')
 
     def clean(self):

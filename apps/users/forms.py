@@ -1,10 +1,12 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm, AuthenticationForm
 from django.core.exceptions import ValidationError
+from phonenumber_field.formfields import PhoneNumberField
+from .utils import BootstrapFormMixin
 from .models import User
 
 
-class LoginForm(AuthenticationForm):
+class LoginForm(BootstrapFormMixin, AuthenticationForm):
     username = forms.EmailField(
         label='Электронная почта',
         widget=forms.EmailInput(attrs={
@@ -19,14 +21,8 @@ class LoginForm(AuthenticationForm):
         })
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            if 'class' not in field.widget.attrs:
-                field.widget.attrs['class'] = 'form-control'
 
-
-class RegistrationForm(UserCreationForm):
+class RegistrationForm(BootstrapFormMixin, UserCreationForm):
     email = forms.EmailField(
         required=True,
         label='Электронная почта',
@@ -35,8 +31,7 @@ class RegistrationForm(UserCreationForm):
             'placeholder': 'example@mail.com',
         })
     )
-    phone = forms.CharField(
-        max_length=20,
+    phone = PhoneNumberField(
         required=True,
         label='Телефон',
         widget=forms.TextInput(attrs={
@@ -56,12 +51,6 @@ class RegistrationForm(UserCreationForm):
         model = User
         fields = ('email', 'first_name', 'phone')
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            if 'class' not in field.widget.attrs:
-                field.widget.attrs['class'] = 'form-control'
-
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if email:
@@ -71,14 +60,14 @@ class RegistrationForm(UserCreationForm):
         return email
 
 
-class UserCreationFormAdmin(UserCreationForm):
+class AdminUserCreationForm(UserCreationForm):
 
     class Meta:
         model = User
         fields = ('email', 'first_name', 'phone')
 
 
-class UserChangeFormAdmin(UserChangeForm):
+class AdminUserChangeForm(UserChangeForm):
 
     class Meta:
         model = User

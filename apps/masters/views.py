@@ -1,14 +1,11 @@
 from django.apps import apps
-from apps.core.decorators import admin_required
-from django.contrib import messages
 from django.db.models import Count
-from django.shortcuts import render, redirect, get_object_or_404
-from django.views.decorators.http import require_POST
+from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
-from django.utils.http import urlencode
 from django.urls import reverse
 from datetime import datetime
 from apps.appointments.services import get_available_slots, get_paginated_page
+from apps.core.decorators import admin_required
 from .models import Master
 
 

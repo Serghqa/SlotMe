@@ -75,8 +75,8 @@ class UserTestCase(TestCase):
         # 2. Валидация на уровне вьюхи при POST запросе
         response = self.client.post(reverse('users:register'), data=form_data)
 
-        # Ожидаем редирект на страницу авторизации
-        self.assertRedirects(response, reverse('users:login'))
+        # Ожидаем редирект на страницу пользователя (profile) после успешной регистрации
+        self.assertRedirects(response, reverse('users:profile'))
 
         # Проверяем, что счетчик пользователей увеличился (стало 21)
         self.assertEqual(User.objects.all().count(), 21)
@@ -85,7 +85,7 @@ class UserTestCase(TestCase):
         # Проверяем запись сообщения об успехе
         messages = list(get_messages(response.wsgi_request))
         self.assertEqual(len(messages), 1)
-        self.assertEqual(str(messages[0]), 'Регистрация прошла успешно! Теперь войдите.')
+        self.assertEqual(str(messages[0]), f'Регистрация прошла успешно! Добро пожаловать, {form_data["first_name"]}!')
 
     def test_registration_form_duplicate_email_error(self):
         """Тест формы: блокировка регистрации, если email уже занят одним из 20 пользователей"""

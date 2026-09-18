@@ -34,7 +34,7 @@ class AppointmentValidationMixin:
         errors.setdefault(field_error, []).append(text_error)
 
     def _validate_user(self, errors):
-        is_admin = self.client.is_admin
+        is_admin = self.client.is_staff
         is_master = self.client.is_master
         if is_admin or is_master:
             self._add_error(
