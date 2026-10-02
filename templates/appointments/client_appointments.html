@@ -10,13 +10,13 @@
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
         <a class="nav-link {% if current_tab == 'upcoming' %}active{% endif %}"
-           href="{% url 'appointments:client_list' %}?tab=upcoming">
+           href="{% url 'appointments:client_appointments' %}?tab=upcoming">
             Предстоящие
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link {% if current_tab == 'past' %}active{% endif %}"
-           href="{% url 'appointments:client_list' %}?tab=past">
+           href="{% url 'appointments:client_appointments' %}?tab=past">
             Прошедшие и отмененные
         </a>
     </li>
@@ -40,17 +40,13 @@
             <tbody>
                 {% for appointment in appointments %}
                     <tr>
-                        <td class="fw-semibold">{{ appointment.master.user|default:"Мастер" }}</td>
-                        <td>{{ appointment.service.name|default:"—" }}</td>
+                        <td class="fw-semibold">{{ appointment.master.user.display_name }}</td>
+                        <td>{{ appointment.service.name }}</td>
                         <td class="text-nowrap">{{ appointment.start_datetime|date:"d.m.Y" }}</td>
                         <td class="text-nowrap">{{ appointment.start_datetime|date:"H:i" }} — {{ appointment.end_datetime|date:"H:i" }}</td>
                         <td>
                             {% if appointment.status == 'booked' %}
-                                {% if appointment.is_past %}
-                                    <span class="badge bg-secondary">Ожидает подтверждения</span>
-                                {% else %}
-                                    <span class="badge bg-primary">Забронирована</span>
-                                {% endif %}
+                                <span class="badge bg-primary">Забронирована</span>
                             {% elif appointment.status == 'completed' %}
                                 <span class="badge bg-success">Завершена</span>
                             {% elif appointment.status == 'cancelled' %}
@@ -62,7 +58,7 @@
                         {% if current_tab == 'upcoming' %}
                             <td>
                                 {% if appointment.can_be_cancelled %}
-                                    <a href="{% url 'appointments:cancel' appointment.id %}" class="btn btn-sm btn-outline-danger">
+                                    <a href="{% url 'appointments:client_cancel' appointment.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-danger">
                                         Отменить
                                     </a>
                                 {% else %}
@@ -86,7 +82,11 @@
             У вас пока нет активных записей.
         {% endif %}
     </div>
-    <a href="{% url 'masters:master_list' %}" class="btn btn-primary px-4">Выбрать мастера</a>
-    <a href="{% url 'services:service_list' %}" class="btn btn-primary px-4">Выбрать услугу</a>
+    <a href="{% url 'masters:master_list' %}" class="btn btn-outline-primary px-4">
+        <i class="bi bi-person-plus"></i> Выбрать мастера
+    </a>
+    <a href="{% url 'services:service_list' %}" class="btn btn-outline-primary px-4">
+        <i class="bi bi-card-checklist"></i> Выбрать услугу
+    </a>
 {% endif %}
 {% endblock content %}

@@ -9,15 +9,15 @@
 
         <div class="card mb-4 shadow-sm border-danger-subtle">
             <div class="card-header bg-danger-subtle text-danger-emphasis fw-semibold">
-                ⚠️ Внимание! Действие необратимо
+                <i class="bi bi-exclamation-triangle"></i> Внимание! Действие необратимо
             </div>
             <div class="card-body">
                 <h5 class="card-title fw-bold mb-3">{{ appointment.service.name }}</h5>
                 <p class="card-text lh-lg mb-0">
-                    <strong>Мастер:</strong> {{ appointment.master.user }}<br>
+                    <strong>Мастер:</strong> {{ appointment.master.user.display_name }}<br>
                     <strong>Дата:</strong> {{ appointment.start_datetime|date:"d.m.Y" }}<br>
                     <strong>Время:</strong> {{ appointment.start_datetime|date:"H:i" }}<br>
-                    <strong>Стоимость:</strong> <span class="text-primary fw-bold">{{ appointment.service.price }}₽</span>
+                    <strong>Стоимость:</strong> <span class="text-primary fw-bold">{{ appointment.service.price|floatformat:0 }} ₽</span>
                 </p>
             </div>
         </div>
@@ -30,10 +30,10 @@
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <button type="submit" class="btn btn-danger px-4">Подтвердить отмену</button>
-                {% if role == "client" %}
-                    <a href="{% url 'appointments:client_list' %}" class="btn btn-outline-secondary">Назад</a>
-                {% elif role == "admin" %}
-                    <a href="{% url 'appointments:admin_list' %}{% if query_string %}?{{ query_string }}{% endif %}" class="btn btn-outline-secondary">Назад</a>
+                {% if user.is_client %}
+                    <a href="{{ to_appointments_url }}" class="btn btn-outline-secondary">Назад</a>
+                {% elif user.is_staff %}
+                    <a href="{{ to_appointments_url }}" class="btn btn-outline-secondary">Назад</a>
                 {% endif %}
             </div>
         </form>

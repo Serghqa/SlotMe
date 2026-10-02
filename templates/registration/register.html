@@ -14,7 +14,7 @@
                 {% if form.non_field_errors %}
                     <div class="alert alert-danger small py-2" role="alert">
                         {% for error in form.non_field_errors %}
-                            {{ error }}
+                            <div>{{ error }}</div>
                         {% endfor %}
                     </div>
                 {% endif %}
@@ -30,7 +30,7 @@
                         {% if field.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in field.errors %}
-                                    {{ error }}
+                                    <div>{{ error }}</div>
                                 {% endfor %}
                             </div>
                         {% endif %}
@@ -40,6 +40,13 @@
                         {% endif %}
                     </div>
                 {% endfor %}
+
+                <div class="form-check mt-3">
+                    <input type="checkbox" class="form-check-input" id="agree" required>
+                    <label class="form-check-label small" for="agree">
+                        Я согласен с <a href="#">условиями обработки персональных данных</a>
+                    </label>
+                </div>
 
                 <button type="submit" class="btn btn-primary w-100 py-2 mt-3">Зарегистрироваться</button>
             </form>

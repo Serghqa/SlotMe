@@ -26,6 +26,7 @@ urlpatterns = [
     path('services/', include('apps.services.urls')),
     path('masters/', include('apps.masters.urls')),
     path('appointments/', include('apps.appointments.urls')),
+    path('admin_panel/', include('apps.admin_panel.urls')),
 ]
 
 if settings.DEBUG:

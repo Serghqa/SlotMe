@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Сервис для записи к мастеру">
-    <meta name="keywords" content="мастер, запись, клиент">
     <title>{% block title %}SlotMe{% endblock title %}</title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -13,6 +12,7 @@
         rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
         crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="icon" href="data:,">
     {% block extra_head %}{% endblock extra_head %}
@@ -53,7 +53,7 @@
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
-                        {% if user.is_master %}
+                        {% if user.is_active_master %}
                             <li class="nav-item">
                                 <a class="nav-link {% if request.resolver_match.url_name == 'master_schedule' %}active{% endif %}"
                                     href="{% url 'appointments:master_schedule' %}"
@@ -61,11 +61,11 @@
                                 Расписание</a>
                             </li>
                         {% endif %}
-                        {% if not user.is_master and not user.is_staff %}
+                        {% if user.is_client %}
                             <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'client_list' %}active{% endif %}"
-                                    href="{% url 'appointments:client_list' %}"
-                                    {% if request.resolver_match.url_name == 'client_list' %}aria-current="page"{% endif %}>
+                                <a class="nav-link {% if request.resolver_match.url_name == 'client_appointments' %}active{% endif %}"
+                                    href="{% url 'appointments:client_appointments' %}"
+                                    {% if request.resolver_match.url_name == 'client_appointments' %}aria-current="page"{% endif %}>
                                 Мои записи</a>
                             </li>
                         {% endif %}
@@ -75,9 +75,14 @@
                                     Админ-панель
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="{% url 'appointments:admin_list' %}">Все записи</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'masters:admin_list' %}">Все мастера</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_panel:appointment_list' %}">Все записи</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'admin_panel:master_list' %}">Все мастера</a></li>
                                 </ul>
+                            </li>
+                        {% endif %}
+                        {% if user.is_superuser %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'admin:index' %}">Django-админка</a>
                             </li>
                         {% endif %}
                         <!-- Профиль и Выход -->
@@ -85,12 +90,14 @@
                             <a class="nav-link fw-bold {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
                                 href="{% url 'users:profile' %}"
                                 {% if request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>
-                            {{ user }}</a>
+                            {{ user.display_name }}</a>
                         </li>
                         <li class="nav-item">
                             <form method="post" action="{% url 'users:logout' %}" class="d-inline">
                                 {% csrf_token %}
-                                <button type="submit" class="nav-link btn btn-link border-0 p-0 py-2" aria-label="Выйти из системы">Выйти</button>
+                                <button type="submit" class="nav-link btn btn-link border-0 py-2" aria-label="Выйти из системы">
+                                    Выйти
+                                </button>
                             </form>
                         </li>
                     {% else %}
@@ -113,12 +120,12 @@
         </div>
     </nav>
 
-    <main class="container mt-4 flex-grow-1" role="main">
+    <main class="container mt-4 flex-grow-1">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                     {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
                 </div>
             {% endfor %}
         {% endif %}
@@ -128,7 +135,7 @@
 
     <footer class="container mt-5 mb-3 text-center text-muted">
         <hr>
-        <p>© {% now "Y" %} SlotMe. Сервис записи к мастеру.</p>
+        <small>© {% now "Y" %} SlotMe. Сервис записи к мастеру.</small>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"

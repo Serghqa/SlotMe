@@ -27,12 +27,28 @@ class Service(ServiceValidationMixin, models.Model):
             models.CheckConstraint(
                 condition=models.Q(duration__gt=timedelta(0)),
                 name='duration_positive',
-                violation_error_message='Длительность должна быть положительной'
-            )
+                violation_error_message='Длительность должна быть положительной',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(price__gte=0),
+                name='price_non_negative',
+                violation_error_message='Стоимость не может быть отрицательной',
+            ),
         ]
 
+    @property
+    def duration_display(self):
+        total = int(self.duration.total_seconds())
+        h, m = divmod(total // 60, 60)
+        if h and m:
+            return f'{h} ч {m} мин'
+        if h:
+            return f'{h} ч'
+        return f'{m} мин'
+
     def __str__(self):
-        return f"{self.name} — {self.price}₽ ({self.duration})"
+        return f"{self.name} — {self.price:.0f}₽ ({self.duration_display})"
 
     def clean(self):
+        super().clean()
         self.clean_service()

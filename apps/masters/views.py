@@ -1,51 +1,46 @@
 from django.apps import apps
-from django.db.models import Count
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from django.urls import reverse
 from datetime import datetime
-from apps.appointments.services import get_available_slots, get_paginated_page
-from apps.core.decorators import admin_required
+from apps.core.utils import get_paginated_page, get_next_url
+from apps.core.services import get_available_slots
 from .models import Master
 
 
-User = apps.get_model('users', 'User')
 Service = apps.get_model('services', 'Service')
 
 
 def master_list_view(request):
-    masters_queryset = Master.objects.filter(is_active=True).prefetch_related('services').order_by('user__first_name')
+    """
+    Страница со списком всех мастеров.
+    """
+    active_services_prefetch = Prefetch(
+        'services',
+        queryset=Service.objects.filter(is_active=True).order_by('name'),
+    )
+    masters_queryset = Master.objects.filter(is_active=True)\
+        .annotate(active_services_count=Count('services', filter=Q(services__is_active=True)))\
+            .prefetch_related(active_services_prefetch)\
+                .order_by('user__first_name')
     page = request.GET.get('page', 1)
     masters_page = get_paginated_page(masters_queryset, page, 5)
 
     return render(request, 'masters/master_list.html', {'masters': masters_page})
 
 
-def master_service_list_view(request, service_id):
-    service = get_object_or_404(
-        Service.objects.prefetch_related('masters'),
-        id=service_id,
-        is_active=True
-    )
-    masters = service.masters.filter(is_active=True).prefetch_related('services')
-    back_services_url = request.META.get('HTTP_REFERER', reverse('services:service_list'))
-    context = {
-        'masters': masters,
-        'selected_service': service,
-        'back_services_url': back_services_url,
-    }
-
-    return render(request, 'masters/master_list.html', context)
-
-
 def master_detail_view(request, master_id):
+    """
+    Страница для записи к мастеру с детальной информацией.
+    """
     master = get_object_or_404(
-        Master.objects.prefetch_related('services'),
+        Master,
         id=master_id,
         is_active=True
     )
 
-    services = master.services.filter(is_active=True)
+    services = master.services.filter(is_active=True).order_by('name')
     date_str = request.GET.get('date')
     service_id = request.GET.get('service_id')
 
@@ -58,15 +53,15 @@ def master_detail_view(request, master_id):
             selected_date = datetime.fromisoformat(date_str).date()
         except ValueError:
             selected_date = timezone.localdate()
+            date_str = selected_date.isoformat()
     else:
         date_str = selected_date.isoformat()
 
     if service_id:
         selected_service = get_object_or_404(services, id=service_id)
 
-    # Считаем слоты только при наличии обоих параметров
     today = timezone.localdate()
-    if selected_date and selected_service:
+    if selected_service:
         if selected_date >= today:
             slots = get_available_slots(master, selected_date, selected_service)
 
@@ -82,35 +77,33 @@ def master_detail_view(request, master_id):
     return render(request, 'masters/master_detail.html', context)
 
 
-@admin_required
-def admin_master_list_view(request):
-    masters_queryset = Master.objects.prefetch_related('services')\
-        .order_by('user__first_name')\
-            .annotate(services_count=Count('services'))
-
-    page = request.GET.get('page', 1)
-    masters_page = get_paginated_page(masters_queryset, page, 3)
-
-    return render(request, 'masters/admin_list.html', {'masters': masters_page})
-
-
-@admin_required
-def admin_master_services(request, master_id):
-    master = get_object_or_404(
-        Master.objects.prefetch_related('services'),
-        id=master_id,
+def masters_by_service_view(request, service_id):
+    """
+    Представление списка всех мастеров, которые предоставляют конкретную услугу.
+    """
+    active_services_prefetch = Prefetch(
+        'services',
+        queryset=Service.objects.filter(is_active=True).order_by('name'),
+    )
+    service = get_object_or_404(
+        Service,
+        id=service_id,
         is_active=True
     )
-    services_queryset = master.services.filter(is_active=True)
+    masters_ids = Master.objects.filter(is_active=True, services__id=service_id).values_list('id', flat=True)
+    masters_queryset = Master.objects.filter(id__in=masters_ids)\
+        .annotate(active_services_count=Count('services', filter=Q(services__is_active=True)))\
+            .prefetch_related(active_services_prefetch)\
+                .order_by('user__first_name')
     page = request.GET.get('page', 1)
-    services_page = get_paginated_page(services_queryset, page, 5)
+    masters_page = get_paginated_page(masters_queryset, page, 2)
 
-    redirect_to = request.GET.get('next') or reverse('masters:admin_list')
+    to_services_url = get_next_url(request, reverse('services:service_list'))
 
     context = {
-        'master': master,
-        'services': services_page,
-        'back_masters_url': redirect_to,
-        'role': 'admin',
+        'masters': masters_page,
+        'selected_service': service,
+        'to_services_url': to_services_url,
     }
-    return render(request, 'services/service_list.html', context)
+
+    return render(request, 'masters/master_list.html', context)

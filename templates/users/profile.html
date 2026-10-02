@@ -8,35 +8,52 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="mb-0">Личный кабинет</h2>
         </div>
+        {% if user.is_master and not user.is_active_master %}
+            <div class="alert alert-warning">
+                Ваш профиль мастера деактивирован. Обратитесь к администратору.
+            </div>
+        {% endif %}
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h4 class="card-title mb-0">{{ user }}</h4>
-                    <a href="#" class="btn btn-sm btn-link text-secondary p-0 text-decoration-none">
-                        ✏️ Редактировать
+                    <h4 class="card-title mb-0">{{ user.display_name }}</h4>
+                    <a href="#" class="btn btn-sm btn-outline-secondary text-decoration-none">
+                        <i class="bi bi-person-vcard"></i> Редактировать
                     </a>
                 </div>
                 <ul class="list-unstyled mb-0">
                     <li class="mb-2">
-                        <span class="text-muted d-block small">Электронная почта:</span>
+                        <span class="text-muted d-block small">
+                            <i class="bi bi-envelope-at"></i> Электронная почта:
+                        </span>
                         <strong>{{ user.email }}</strong>
                     </li>
                     <li class="mb-0">
-                        <span class="text-muted d-block small">Номер телефона:</span>
-                        <strong>{{ user.phone }}</strong>
+                        <span class="text-muted d-block small">
+                            <i class="bi bi-telephone"></i> Номер телефона:
+                        </span>
+                        <strong>{{ user.phone.as_national }}</strong>
                     </li>
                 </ul>
             </div>
         </div>
 
         <div class="d-flex gap-2 flex-wrap">
-            {% if user.is_master %}
-                <a href="{% url 'appointments:master_schedule' %}" class="btn btn-outline-primary">📅 Моё расписание</a>
+            {% if user.is_active_master %}
+                <a href="{% url 'appointments:master_schedule' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-calendar-check"></i> Моё расписание
+                </a>
             {% elif user.is_staff %}
-                <a href="{% url 'appointments:admin_list' %}" class="btn btn-outline-primary">Все записи</a>
-                <a href="{% url 'masters:admin_list' %}" class="btn btn-outline-primary">Все мастера</a>
-            {% else %}
-                <a href="{% url 'appointments:client_list' %}" class="btn btn-outline-primary">📝 Мои записи</a>
+                <a href="{% url 'admin_panel:appointment_list' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-journals"></i> Все записи
+                </a>
+                <a href="{% url 'admin_panel:master_list' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-person-gear"></i> Все мастера
+                </a>
+            {% elif user.is_client %}
+                <a href="{% url 'appointments:client_appointments' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-journal-check"></i> Мои записи
+                </a>
             {% endif %}
         </div>
     </div>

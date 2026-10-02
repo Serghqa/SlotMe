@@ -7,6 +7,10 @@ class AppointmentValidationMixin:
     """Миксин для комплексной валидации Appointment"""
 
     def clean_appointment(self):
+        """
+        Точка входа валидации. Запускает нужный набор проверок в зависимости
+        от того, создаётся запись или обновляется.
+        """
         AppointmentModel = apps.get_model('appointments', 'Appointment')
 
         status_labels = dict(AppointmentModel.STATUS_CHOICES)
@@ -31,9 +35,15 @@ class AppointmentValidationMixin:
             raise ValidationError(errors)
 
     def _add_error(self, errors: dict, field_error: str, text_error: str):
+        """
+        Добавляет сообщение об ошибке к указанному полю, накапливая их в словаре.
+        """
         errors.setdefault(field_error, []).append(text_error)
 
     def _validate_user(self, errors):
+        """
+        Проверяет, что клиент может быть записан на приём.
+        """
         is_admin = self.client.is_staff
         is_master = self.client.is_master
         if is_admin or is_master:
@@ -50,6 +60,9 @@ class AppointmentValidationMixin:
             )
 
     def _validate_service(self, errors):
+        """
+        Проверяет, что услуга активна.
+        """
         if not self.service.is_active:
             self._add_error(
                 errors=errors,
@@ -58,6 +71,9 @@ class AppointmentValidationMixin:
             )
 
     def _validate_master(self, errors):
+        """
+        Проверяет, что мастер активен.
+        """
         if not self.master.is_active:
             self._add_error(
                 errors=errors,
@@ -66,6 +82,10 @@ class AppointmentValidationMixin:
             )
 
     def _validate_master_service(self, errors):
+        """
+        Проверяет, что выбранный мастер действительно предоставляет
+        выбранную услугу.
+        """
         if not self.master.services.filter(id=self.service_id).exists():
             self._add_error(
                 errors=errors,
@@ -74,6 +94,9 @@ class AppointmentValidationMixin:
             )
 
     def _validate_status_create(self, errors, status_labels):
+        """
+        Проверяет, что новая запись создаётся только в статусе 'booked'.
+        """
         if self.status != 'booked':
             self._add_error(
                 errors=errors,
@@ -82,6 +105,9 @@ class AppointmentValidationMixin:
             )
 
     def _validate_not_past_time(self, errors):
+        """
+        Проверяет, что время начала записи не находится в прошлом.
+        """
         if self.start_datetime < timezone.now():
             self._add_error(
                 errors=errors,
@@ -90,6 +116,9 @@ class AppointmentValidationMixin:
             )
 
     def _validate_status_update(self, errors, status_labels, appontment_model):
+        """
+        Проверяет допустимость смены статуса существующей записи.
+        """
         now = timezone.now()
         start_local = timezone.localtime(self.start_datetime)
         # Для существующей записи проверяем переходы
@@ -137,6 +166,10 @@ class AppointmentValidationMixin:
                 )
 
     def _validate_master_time_availability(self, errors, appontment_model):
+        """
+        Проверяет, что запись укладывается в рабочее время мастера
+        и не пересекается с другими активными записями.
+        """
         start_local = timezone.localtime(self.start_datetime)
         end = self.start_datetime + self.service.duration
         end_local = timezone.localtime(end)
@@ -197,7 +230,7 @@ class AppointmentValidationMixin:
             return
 
         # Проверка 2: Наложение на другие существующие записи мастера
-        overlapping = appontment_model.objects.select_for_update().filter(
+        overlapping = appontment_model.objects.filter(
             master=self.master,
             start_datetime__lt=end,
             end_datetime__gt=self.start_datetime

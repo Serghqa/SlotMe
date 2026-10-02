@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin import RelatedOnlyFieldListFilter
 from django.utils import timezone
 from .models import Appointment
 
@@ -6,8 +7,8 @@ from .models import Appointment
 @admin.register(Appointment)
 class AppointmentAdmin(admin.ModelAdmin):
     list_display = ('client', 'master', 'service', 'start_datetime', 'end_datetime', 'status', 'created_at')
-    list_filter = ('status', 'master')
-    search_fields = ('client__username', 'client__first_name', 'client__last_name', 'master__user__username')
+    list_filter = ('status', ('master', RelatedOnlyFieldListFilter))
+    search_fields = ('client__email', 'client__first_name', 'client__phone', 'master__user__email', 'master__user__first_name')
     readonly_fields = ('end_datetime', 'created_at', 'cancelled_at')
     date_hierarchy = 'start_datetime'
     raw_id_fields = ('client', 'master', 'service')
@@ -27,7 +28,7 @@ class AppointmentAdmin(admin.ModelAdmin):
         if obj.status == 'booked' and now < obj.start_datetime:
             return ('client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'cancelled_at')
         # 2. Забронирована и в ПРОШЛОМ -> закрываем всё, кроме статуса
-        if obj.status == 'booked' and now >= obj.start_datetime:
+        elif obj.status == 'booked' and now >= obj.start_datetime:
             return ('client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'cancelled_at', 'cancel_reason')
         # 3. ОТМЕНЕНА -> закрываем всё, кроме причины отмены (статус тоже закрыт!)
         elif obj.status == 'cancelled':

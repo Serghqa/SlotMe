@@ -12,7 +12,7 @@ from django.utils.http import urlencode
 from datetime import time, timedelta, datetime
 from unittest.mock import PropertyMock, patch
 from zoneinfo import ZoneInfo
-from apps.appointments.services import get_available_slots, invalidate_slots_cache
+from apps.core.services import get_available_slots, invalidate_slots_cache
 from .models import Appointment
 
 User = get_user_model()

@@ -1,13 +1,10 @@
 from django.apps import apps
 from django.core.cache import cache
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import DateTimeField
-from django.db.models.functions import Cast
 from django.utils import timezone
 from datetime import datetime, date, timedelta
-from .models import Appointment
 
 
+Appointment = apps.get_model('appointments', 'Appointment')
 Master = apps.get_model('masters', 'Master')
 WorkSchedule = apps.get_model('masters', 'WorkSchedule')
 ScheduleException = apps.get_model('masters', 'ScheduleException')
@@ -15,22 +12,6 @@ Service = apps.get_model('services', 'Service')
 
 SLOT_STEP = 30
 TIMEOUT = 60
-
-
-def get_paginated_page(queryset, page_number, per_page=10):
-    """
-    Универсальная пагинация QuerySet.
-    """
-    paginator = Paginator(queryset, per_page)
-
-    try:
-        page_obj = paginator.page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-
-    return page_obj
 
 
 def get_available_slots(master: Master, date: date, service: Service):
@@ -68,11 +49,14 @@ def get_available_slots(master: Master, date: date, service: Service):
     busy_queryset = Appointment.objects.filter(
         master=master,
         start_datetime__date=date,
-        status='booked'
-    ).annotate(
-        local_start_dt=Cast('start_datetime', DateTimeField()),
-        local_end_dt=Cast('end_datetime', DateTimeField())
-    ).values_list('local_start_dt', 'local_end_dt')
+        status='booked',
+        end_datetime__isnull=False,
+    ).values_list('start_datetime', 'end_datetime')
+    busy_slots_local = [
+        (
+            timezone.localtime(start), timezone.localtime(end)
+        ) for start, end in busy_queryset
+    ]
 
     # 4. Генерируем свободные слоты с шагом 30 минут
     slots = []
@@ -91,7 +75,7 @@ def get_available_slots(master: Master, date: date, service: Service):
 
     while current + duration <= end_local_datetime:
         slot_end = current + duration
-        if not _is_overlapping(current, slot_end, busy_queryset):
+        if not _is_overlapping(current, slot_end, busy_slots_local):
             slots.append(current.time())
         current += step
 

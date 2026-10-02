@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load url_tags %}
+
+{% block title %}Мастера — SlotMe{% endblock title %}
+
+{% block content %}
+<h2 class="mb-4">Все мастера</h2>
+
+{% if masters %}
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Мастер</th>
+                    <th class="text-nowrap">Электронная почта</th>
+                    <th>Телефон</th>
+                    <th class="service-col">Услуги</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for master in masters %}
+                    <tr>
+                        <td>
+                            <a href="#" class="btn btn-sm btn-outline-secondary">{{ master.user.display_name }}</a>
+                        </td>
+                        <td class="text-nowrap">{{ master.user.email }}</td>
+                        <td class="text-nowrap">{{ master.user.phone.as_national|default:"—" }}</td>
+                        <td>
+                            <a href="{% url 'admin_panel:master_services' master.id %}?next={{ request.get_full_path }}" class="btn btn-sm btn-outline-primary">
+                                Посмотреть услуги ({{ master.services_count }})
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <!-- БЛОК ПАГИНАЦИИ BOOTSTRAP -->
+    {% render_pagination masters %}
+{% else %}
+    <div class="alert alert-info mb-3 shadow-sm">Мастеров пока нет.</div>
+{% endif %}
+{% endblock content %}

@@ -18,9 +18,13 @@
     </div>
     <div class="col-12 col-md-auto d-flex justify-content-md-end justify-content-center">
         <div class="btn-group">
-            <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-outline-primary">« {{ prev_date|date:"d.m" }}</a>
+            <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-outline-primary">
+                {{ prev_date|date:"d.m" }} <i class="bi bi-arrow-left-short"></i>
+            </a>
             <span class="btn btn-primary disabled text-white fw-bold">{{ selected_date|date:"d.m.Y" }}</span>
-            <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-outline-primary">{{ next_date|date:"d.m" }} »</a>
+            <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-right-short"></i> {{ next_date|date:"d.m" }}
+            </a>
         </div>
     </div>
 </div>
@@ -41,18 +45,14 @@
             <tbody>
                 {% for appointment in appointments %}
                     <tr>
-                        <td class="fw-semibold">{{ appointment.client|default:"Клиент" }}</td>
+                        <td class="fw-semibold">{{ appointment.client.display_name }}</td>
                         <td class="text-nowrap">{{ appointment.start_datetime|date:"H:i" }} — {{ appointment.end_datetime|date:"H:i" }}</td>
-                        <td class="text-nowrap">{{ appointment.client.phone|default:"—" }}</td>
+                        <td class="text-nowrap">{{ appointment.client.phone.as_national|default:"—" }}</td>
                         <td>{{ appointment.service.name }}</td>
-                        <td>{{ appointment.service.price }}₽</td>
+                        <td>{{ appointment.service.price|floatformat:0 }} ₽</td>
                         <td>
                             {% if appointment.status == 'booked' %}
-                                {% if appointment.end_datetime < now %}
-                                    <span class="badge bg-secondary">Ожидает подтверждения</span>
-                                {% else %}
-                                    <span class="badge bg-primary">Забронирована</span>
-                                {% endif %}
+                                <span class="badge bg-primary">Забронирована</span>
                             {% elif appointment.status == 'completed' %}
                                 <span class="badge bg-success">Завершена</span>
                             {% elif appointment.status == 'no_show' %}
@@ -71,7 +71,7 @@
 
 {% else %}
     <div class="alert alert-info mb-3 shadow-sm">
-        <p class="mb-0">На этот день записей нет.</p>
+       На этот день записей нет.
     </div>
 {% endif %}
 {% endblock content %}

@@ -2,11 +2,16 @@
 {% load url_tags %}
 
 {% block title %}
-    Услуги — SlotMe
+    Услуги мастера {{ master.user.display_name }} — SlotMe
 {% endblock title %}
 
 {% block content %}
-<h2 class="mb-4">Наши услуги</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Услуги мастера <span class="text-primary">{{ master.user.display_name }}</span></h2>
+    <a href="{{ to_masters_url }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад к мастерам
+    </a>
+</div>
 
 {% if services %}
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
@@ -29,18 +34,14 @@
                                     <i class="bi bi-clock"></i> {{ service.duration_display }}
                                 </div>
                             </div>
-                            <a href="{% url 'masters:masters_service' service.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-primary">
-                                Выбрать
-                            </a>
                         </div>
                     </div>
                 </div>
             </div>
         {% endfor %}
     </div>
-    <!-- БЛОК ПАГИНАЦИИ BOOTSTRAP -->
     {% render_pagination services %}
 {% else %}
-    <div class="alert alert-info">Услуг пока нет.</div>
+    <div class="alert alert-info">У мастера пока нет услуг.</div>
 {% endif %}
 {% endblock content %}

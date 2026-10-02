@@ -112,5 +112,5 @@ class ScheduleException(WorkingHoursMixin, models.Model):
 
     def __str__(self):
         if self.is_working:
-            return f"{self.master} — {self.date}: {self.start_time}–{self.end_time}"
+            return f"{self.master} — {self.date}: {self.start_time:%H:%M}–{self.end_time:%H:%M}"
         return f"{self.master} — {self.date}: выходной"

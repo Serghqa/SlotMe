@@ -47,3 +47,12 @@ class ScheduleInlineMixin:
     def get_queryset(self, request):
         """Предзагрузка связанных данных мастера для строк инлайна."""
         return super().get_queryset(request).select_related('master__user')
+
+
+class ReadonlyFieldOnEditMixin:
+    readonly_field_name = None
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and self.readonly_field_name:
+            return (self.readonly_field_name,)
+        return ()

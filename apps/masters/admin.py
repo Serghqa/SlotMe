@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.admin import RelatedOnlyFieldListFilter
 from .models import Master, WorkSchedule, ScheduleException
-from .utils import FilterActiveMasterMixin, ScheduleInlineMixin
+from .utils import FilterActiveMasterMixin, ScheduleInlineMixin, ReadonlyFieldOnEditMixin
 
 
 User = get_user_model()
@@ -20,7 +20,7 @@ class ScheduleExceptionInline(ScheduleInlineMixin, admin.TabularInline):
 
 
 @admin.register(Master)
-class MasterAdmin(admin.ModelAdmin):
+class MasterAdmin(ReadonlyFieldOnEditMixin, admin.ModelAdmin):
     fields = ('user', 'is_active', 'services', 'bio', 'photo')
     list_per_page = 15
     list_display = ('master_name', 'master_email', 'master_phone', 'is_active')
@@ -28,13 +28,7 @@ class MasterAdmin(admin.ModelAdmin):
     search_fields = ('user__email', 'user__first_name', 'user__phone')
     filter_horizontal = ('services',)
     inlines = [WorkScheduleInline, ScheduleExceptionInline]
-
-
-    def get_queryset(self, request):
-        """Оптимизация запросов к БД (решение проблемы N+1)."""
-        queryset = super().get_queryset(request)
-        # prefetch_related эффективно подтягивает многие-ко-многим (услуги)
-        return queryset.prefetch_related('services')
+    readonly_field_name = 'user'
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Показывает в выпадающем списке только пользователей без привязки к мастеру."""
@@ -49,60 +43,37 @@ class MasterAdmin(admin.ModelAdmin):
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-    def get_readonly_fields(self, request, obj=None):
-        """Если объект редактируется, делаем поле 'user' доступным только для чтения."""
-        if obj:
-            return ('user',)
-        return ()
-
     @admin.display(description='Мастер', ordering='user__first_name')
     def master_name(self, obj):
-        return obj.user.get_full_name()
+        return obj.user.display_name
 
-    @admin.display(description='Электронная почта', ordering='user__first_name')
+    @admin.display(description='Электронная почта', ordering='user__email')
     def master_email(self, obj):
         return obj.user.email
 
-    @admin.display(description='Телефон', ordering='user__first_name')
+    @admin.display(description='Телефон', ordering='user__phone')
     def master_phone(self, obj):
         return obj.user.phone
 
-    @admin.display(description='Услуги')
-    def services_list(self, obj):
-        services = obj.services.all()
-        services_str = ', '.join(s.name for s in services[:3])
-        if len(services_str) > 50:
-            services_str = services_str[:47] + '...'
-
-        return services_str or "-"
-
 
 @admin.register(WorkSchedule)
-class WorkScheduleAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
+class WorkScheduleAdmin(ReadonlyFieldOnEditMixin, FilterActiveMasterMixin, admin.ModelAdmin):
     fields = ('master', 'day_of_week', 'start_time', 'end_time', 'is_working')
     list_display = ('master', 'day_of_week', 'start_time', 'end_time', 'is_working')
     list_filter = ('master__is_active', 'day_of_week', 'is_working', ('master', RelatedOnlyFieldListFilter))
     list_per_page = 15
     list_select_related = ('master__user',)
     search_fields = ('master__user__first_name', 'master__user__phone', 'master__user__email')
+    readonly_field_name = 'master'
 
-    def get_readonly_fields(self, request, obj=None):
-        """Если объект редактируется, делаем поле 'master' доступным только для чтения."""
-        if obj:
-            return ('master',)
-        return ()
 
 
 @admin.register(ScheduleException)
-class ScheduleExceptionAdmin(FilterActiveMasterMixin, admin.ModelAdmin):
+class ScheduleExceptionAdmin(ReadonlyFieldOnEditMixin, FilterActiveMasterMixin, admin.ModelAdmin):
     fields = ('master', 'date', 'is_working', 'start_time', 'end_time', 'reason')
     list_display = ('master', 'date', 'is_working', 'start_time', 'end_time', 'reason')
     list_filter = ('master__is_active', 'is_working', 'date', ('master', RelatedOnlyFieldListFilter))
     list_per_page = 15
     list_select_related = ('master__user',)
     search_fields = ('reason', 'master__user__first_name', 'master__user__phone', 'master__user__email')
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return ('master',)
-        return ()
+    readonly_field_name = 'master'
