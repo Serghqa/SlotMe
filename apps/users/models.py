@@ -75,14 +75,3 @@ class User(AbstractUser):
     @property
     def is_client(self):
         return not self.is_master and not self.is_staff and not self.is_superuser
-
-    @property
-    def role(self):
-        if self.is_superuser:
-            return 'superuser'
-        if self.is_staff:
-            return 'admin'
-        if self.is_master:
-            return 'master'
-        if self.is_client:
-            return 'client'

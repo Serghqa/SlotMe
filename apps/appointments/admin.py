@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import RelatedOnlyFieldListFilter
-from django.utils import timezone
+from apps.core.choices import StatusChoices
 from .models import Appointment
 
 
@@ -9,67 +9,59 @@ class AppointmentAdmin(admin.ModelAdmin):
     list_display = ('client', 'master', 'service', 'start_datetime', 'end_datetime', 'status', 'created_at')
     list_filter = ('status', ('master', RelatedOnlyFieldListFilter))
     search_fields = ('client__email', 'client__first_name', 'client__phone', 'master__user__email', 'master__user__first_name')
-    readonly_fields = ('end_datetime', 'created_at', 'cancelled_at')
     date_hierarchy = 'start_datetime'
     raw_id_fields = ('client', 'master', 'service')
+
+    BASE_READONLY_FIELDS = {'end_datetime', 'created_at', 'cancelled_at'}
+    ALL_FIELDS = ['client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'status', 'cancel_reason', 'cancelled_at']
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.select_related('client', 'master__user', 'service')
 
     def get_readonly_fields(self, request, obj=None):
-        base_readonly = ('end_datetime', 'created_at', 'cancelled_at')
+        # При создании записи базовые поля недоступны для редактирования
         if not obj:
-            return base_readonly
+            return tuple(self.BASE_READONLY_FIELDS)
 
-        now = timezone.now()
+        readonly_fields = set(self.ALL_FIELDS)
+        readonly_fields.discard('status')
 
-        # 1. Забронирована и в БУДУЩЕМ -> закрываем всё, кроме статуса и причины
-        if obj.status == 'booked' and now < obj.start_datetime:
-            return ('client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'cancelled_at')
-        # 2. Забронирована и в ПРОШЛОМ -> закрываем всё, кроме статуса
-        elif obj.status == 'booked' and now >= obj.start_datetime:
-            return ('client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'cancelled_at', 'cancel_reason')
-        # 3. ОТМЕНЕНА -> закрываем всё, кроме причины отмены (статус тоже закрыт!)
-        elif obj.status == 'cancelled':
-            return ('client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'status', 'cancelled_at')
-        # 4. ЗАВЕРШЕНА или НЕЯВКА -> закрываем абсолютно всё
-        else:
-            return ('client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'status', 'cancelled_at', 'cancel_reason')
+        if StatusChoices.CANCELLED in obj.allowed_status_transitions:
+            readonly_fields.discard('cancel_reason')  # Причина отмены доступна только для записей, которые можно отменить
+
+        return tuple(readonly_fields)
 
     def get_fields(self, request, obj=None):
+        # При создании записи запрашиваем только необходимый минимум
         if not obj:
             return ['client', 'master', 'service', 'start_datetime', 'status']
 
-        now = timezone.now()
-        # 1. Забронирована и в БУДУЩЕМ -> редактируем статус (отмена) + причина
-        if obj.status == 'booked' and now < obj.start_datetime:
-            return ['client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'status', 'cancel_reason']
-        # 2. Забронирована и в ПРОШЛОМ -> редактируем статус (завершить/неявка)
-        elif obj.status == 'booked' and now >= obj.start_datetime:
-            return ['client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'status']
-        # 3. ОТМЕНЕНА -> только корректировка причины
-        elif obj.status == 'cancelled':
-            return ['client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'status', 'cancel_reason', 'cancelled_at']
-        # 4. ЗАВЕРШЕНА или НЕЯВКА -> только просмотр
-        else:
-            return ['client', 'master', 'service', 'start_datetime', 'end_datetime', 'created_at', 'status']
+        fields = self.ALL_FIELDS.copy()
+
+        if StatusChoices.CANCELLED not in obj.allowed_status_transitions:
+            fields.remove('cancel_reason')  # Причина отмены неактуальна для записей, которые нельзя отменить
+
+        if obj.status != StatusChoices.CANCELLED:
+            fields.remove('cancelled_at')  # Дата отмены неактуальна для записей, которые не отменены
+
+        return fields
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         form = super().get_form(request, obj, change, **kwargs)
-        if obj and 'status' in form.base_fields:
-            now = timezone.now()
-            # Если в будущем: можно оставить booked или перевести в cancelled
-            if obj.status == 'booked' and now < obj.start_datetime:
-                form.base_fields['status'].choices = [
-                    ('booked', 'Забронирована'),
-                    ('cancelled', 'Отменена'),
-                ]
-            # Если в прошлом: можно только completed или no_show
-            elif obj.status == 'booked' and now >= obj.start_datetime:
-                form.base_fields['status'].choices = [
-                    ('completed', 'Завершена'),
-                    ('no_show', 'Неявка'),
-                ]
+
+        if 'status' not in form.base_fields:
+            return form
+
+        # Если создаем новую запись, доступен только один статус
+        if not obj:
+            form.base_fields['status'].choices = [(StatusChoices.BOOKED, StatusChoices.BOOKED.label)]
+            return form
+
+        # Для существующей записи берем доступные переходы из модели (метод allowed_status_transitions)
+        status_labels = dict(StatusChoices.choices)
+        form.base_fields['status'].choices = [
+            (choice, status_labels[choice]) for choice in obj.allowed_status_transitions
+        ]
 
         return form

@@ -29,7 +29,7 @@
                     {% for service in services %}
                         <option value="{{ service.id }}"
                             {% if selected_service and selected_service.id == service.id %}selected{% endif %}>
-                            {{ service.name }} — {{ service.price|floatformat:0 }}₽ ({{ service.duration_display }})
+                            {{ service.name }} — {{ service.price|floatformat:0 }} ₽ ({{ service.duration_display }})
                         </option>
                     {% endfor %}
                 </select>
@@ -49,7 +49,7 @@
         {% if selected_date and selected_service %}
             <h5 class="mb-2">Свободное время на {{ selected_date|date:"d.m.Y" }}</h5>
             <p class="text-muted small mb-3">
-                {{ selected_service.name }} — <span class="fw-bold text-primary">{{ selected_service.price|floatformat:0 }}₽</span>
+                {{ selected_service.name }} — <span class="fw-bold text-primary">{{ selected_service.price|floatformat:0 }} ₽</span>
             </p>
 
             {% if slots %}

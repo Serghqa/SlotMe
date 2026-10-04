@@ -1,10 +1,11 @@
 from django.apps import apps
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from apps.core.choices import StatusChoices, WeekdaysChoices
 
 
 class AppointmentValidationMixin:
-    """Миксин для комплексной валидации Appointment"""
+    """Миксин для комплексной валидации Appointment в Django-Admin"""
 
     def clean_appointment(self):
         """
@@ -13,10 +14,9 @@ class AppointmentValidationMixin:
         """
         AppointmentModel = apps.get_model('appointments', 'Appointment')
 
-        status_labels = dict(AppointmentModel.STATUS_CHOICES)
         errors = {}
 
-        if not self.master_id or not self.service_id or not self.client_id or not self.start_datetime:
+        if not all([self.master_id, self.service_id, self.client_id, self.start_datetime]):
             raise ValidationError('Заполните обязательные поля.')
 
         if not self.pk:
@@ -24,12 +24,12 @@ class AppointmentValidationMixin:
             self._validate_master(errors)
             self._validate_service(errors)
             self._validate_master_service(errors)
-            self._validate_status_create(errors, status_labels)
+            self._validate_status_create(errors)
             self._validate_not_past_time(errors)
             if 'start_datetime' not in errors:
                 self._validate_master_time_availability(errors, AppointmentModel)
         else:
-            self._validate_status_update(errors, status_labels, AppointmentModel)
+            self._validate_status_update(errors, AppointmentModel)
 
         if errors:
             raise ValidationError(errors)
@@ -46,17 +46,18 @@ class AppointmentValidationMixin:
         """
         is_admin = self.client.is_staff
         is_master = self.client.is_master
+        user_name = self.client.display_name
         if is_admin or is_master:
             self._add_error(
                 errors=errors,
                 field_error='client',
-                text_error=f'Пользователь {self.client} является сотрудником и не может быть записан.'
+                text_error=f"Пользователь {user_name} является сотрудником и не может быть записан."
             )
         if not self.client.is_active:
             self._add_error(
                 errors=errors,
                 field_error='client',
-                text_error=f'Пользователь {self.client} не активный.'
+                text_error=f"Пользователь {user_name} не активный."
             )
 
     def _validate_service(self, errors):
@@ -67,7 +68,7 @@ class AppointmentValidationMixin:
             self._add_error(
                 errors=errors,
                 field_error='service',
-                text_error=f'Услуга "{self.service}" неактивна.'
+                text_error=f"Услуга {self.service.name} неактивна."
             )
 
     def _validate_master(self, errors):
@@ -78,7 +79,7 @@ class AppointmentValidationMixin:
             self._add_error(
                 errors=errors,
                 field_error='master',
-                text_error=f'Мастер "{self.master}" неактивен.',
+                text_error=f"Мастер {self.master.user.display_name} неактивен.",
             )
 
     def _validate_master_service(self, errors):
@@ -90,59 +91,71 @@ class AppointmentValidationMixin:
             self._add_error(
                 errors=errors,
                 field_error='service',
-                text_error=f'Мастер {self.master} не предоставляет услугу "{self.service}".',
+                text_error=f"Мастер {self.master.user.display_name} не предоставляет услугу {self.service.name}.",
             )
 
-    def _validate_status_create(self, errors, status_labels):
+    def _validate_status_create(self, errors):
         """
-        Проверяет, что новая запись создаётся только в статусе 'booked'.
+        Проверяет, что новая запись создаётся только в статусе booked.
         """
-        if self.status != 'booked':
+        if self.status != StatusChoices.BOOKED:
             self._add_error(
                 errors=errors,
                 field_error='status',
-                text_error=f'Новая запись может быть только в статусе {status_labels["booked"]}.',
+                text_error=f"Новая запись может быть только в статусе {StatusChoices.BOOKED.label}.",
             )
 
     def _validate_not_past_time(self, errors):
         """
         Проверяет, что время начала записи не находится в прошлом.
         """
-        if self.start_datetime < timezone.now():
+        if self.is_past:
             self._add_error(
                 errors=errors,
                 field_error='start_datetime',
                 text_error='Нельзя создать запись на прошедшее время.',
             )
 
-    def _validate_status_update(self, errors, status_labels, appontment_model):
+    def _validate_status_update(self, errors, appontment_model):
         """
         Проверяет допустимость смены статуса существующей записи.
         """
-        now = timezone.now()
-        start_local = timezone.localtime(self.start_datetime)
         # Для существующей записи проверяем переходы
+        # Сначала получаем старый статус из базы данных, чтобы сравнить его с новым статусом.
         old_status = appontment_model.objects.only('status').get(pk=self.pk).status
 
-        # Нельзя менять статус завершённой или отменённой записи
-        if old_status in ['completed', 'cancelled', 'no_show']:
-            if old_status != self.status:
-                text_error = (
-                    f'Нельзя изменить статус с "{status_labels[old_status]}" на "{status_labels[self.status]}". '
-                    f'Запись уже завершена или отменена.'
-                )
-                self._add_error(
-                    errors=errors,
-                    field_error='status',
-                    text_error=text_error,
-                )
+        # 'cancelled' можно установить только для будущих записей
+        if self.is_cancelled and self.is_past:
+            self._add_error(
+                errors=errors,
+                field_error='status',
+                text_error='Отменить запись можно только до её начала.',
+            )
             return
 
-        # Запрещаем 'completed' и 'no_show' для будущих записей
-        if self.status in ['completed', 'no_show'] and self.start_datetime > now:
+        # Проверяем, что поле "Причина отмены" заполнено только для отменённых записей
+        if not self.is_cancelled and self.cancel_reason:
+            self._add_error(
+                errors=errors,
+                field_error='cancel_reason',
+                text_error='Причина отмены может быть указана только для отменённых записей.',
+            )
+            return
+
+        # Нельзя менять статус отменённой записи
+        if old_status == StatusChoices.CANCELLED and not self.is_cancelled:
+            self._add_error(
+                errors=errors,
+                field_error='status',
+                text_error='Нельзя менять статус отмененной записи.',
+            )
+            return
+
+        # Статус completed можно изменить толко на no_show и наоборот
+        if old_status in [StatusChoices.COMPLETED, StatusChoices.NO_SHOW] and \
+            self.status not in [StatusChoices.COMPLETED, StatusChoices.NO_SHOW]:
             text_error = (
-                f'Нельзя установить статус "{status_labels[self.status]}" '
-                f'для будущей записи ({start_local:%d.%m.%Y %H:%M}).'
+                f"Завершённая запись может быть только {StatusChoices.COMPLETED.label} или {StatusChoices.NO_SHOW.label}"
             )
             self._add_error(
                 errors=errors,
@@ -151,19 +164,17 @@ class AppointmentValidationMixin:
             )
             return
 
-        # 'completed' можно поставить только после времени окончания
-        if self.status == 'completed':
-            end_local = timezone.localtime(start_local + self.service.duration)
-            if now < end_local:
-                text_error = (
-                    f'Статус {status_labels[self.status]} можно установить только после окончания записи '
-                    f'({end_local:%d.%m.%Y %H:%M}).'
-                )
-                self._add_error(
-                    errors=errors,
-                    field_error='status',
-                    text_error=text_error,
-                )
+        # Запрещаем 'completed', 'no_show' для будущих записей
+        if self.status in [StatusChoices.COMPLETED, StatusChoices.NO_SHOW] and not self.is_past:
+            text_error = (
+                f"Статус {self.status.label} можно установить только для прошедших записей."
+            )
+            self._add_error(
+                errors=errors,
+                field_error='status',
+                text_error=text_error,
+            )
+            return
 
     def _validate_master_time_availability(self, errors, appontment_model):
         """
@@ -189,7 +200,7 @@ class AppointmentValidationMixin:
                 self._add_error(
                     errors=errors,
                     field_error='start_datetime',
-                    text_error=f'{booking_date:%d.%m.%Y} - мастер не работает. Причина: {reason}',
+                    text_error=f"{booking_date:%d.%m.%Y} - мастер не работает. Причина: {reason}",
                 )
                 return
             reason = exception.reason or 'Особые часы'
@@ -203,7 +214,7 @@ class AppointmentValidationMixin:
                 self._add_error(
                     errors=errors,
                     field_error='start_datetime',
-                    text_error=f'{booking_date:%d.%m.%Y} ({booking_date:%A}) — нерабочий день.',
+                    text_error=f"{booking_date:%d.%m.%Y} ({WeekdaysChoices(day_of_week).label}) — нерабочий день.",
                 )
                 return
             work_start, work_end = schedule.start_time, schedule.end_time
@@ -219,8 +230,8 @@ class AppointmentValidationMixin:
 
         if not (work_start <= booking_start_time and work_end >= booking_end_time):
             text_error = (
-                f'Запись выходит за рамки рабочего времени мастера в этот день ({work_start:%H:%M} – {work_end:%H:%M}).'
-                f' {reason if reason else "Нерабочие часы."}'
+                f"Запись выходит за рамки рабочего времени мастера в этот день ({work_start:%H:%M} – {work_end:%H:%M})."
+                f" {reason if reason else 'Нерабочие часы.'}"
             )
             self._add_error(
                 errors=errors,
@@ -234,7 +245,7 @@ class AppointmentValidationMixin:
             master=self.master,
             start_datetime__lt=end,
             end_datetime__gt=self.start_datetime
-        ).exclude(status='cancelled').order_by('start_datetime')
+        ).exclude(status=StatusChoices.CANCELLED).order_by('start_datetime')
 
         if overlapping.exists():
             # Формируем список всех конфликтов
@@ -243,7 +254,7 @@ class AppointmentValidationMixin:
                 conflict_start = timezone.localtime(conflict.start_datetime)
                 conflict_end = timezone.localtime(conflict.end_datetime)
                 conflict_lines.append(
-                    f'({conflict_start:%H:%M} – {conflict_end:%H:%M})'
+                    f"({conflict_start:%H:%M} – {conflict_end:%H:%M})"
                 )
 
             self._add_error(

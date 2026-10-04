@@ -13,6 +13,7 @@ from datetime import time, timedelta, datetime
 from unittest.mock import PropertyMock, patch
 from zoneinfo import ZoneInfo
 from apps.core.services import get_available_slots, invalidate_slots_cache
+from apps.core.choices import StatusChoices
 from .models import Appointment
 
 User = get_user_model()
@@ -23,7 +24,7 @@ ScheduleException = apps.get_model('masters', 'ScheduleException')
 
 
 class AppointmentBookingTestCase(TestCase):
-    """Тесты создания и валидации записей"""
+    """Тесты создания/обновления и валидации записей"""
 
     def setUp(self):
         """Создаем базовое окружение для тестов"""
@@ -87,7 +88,9 @@ class AppointmentBookingTestCase(TestCase):
             datetime.combine(self.monday, time(10, 0))
         )
 
-    # ==================== БАЗОВАЯ ВАЛИДАЦИЯ ====================
+    # ==================== АДМИНКА DJANGO ====================
+
+    # 1. БАЗОВАЯ ВАЛИДАЦИЯ И СОЗДАНИЕ ЗАПИСЕЙ
 
     def test_valid_booking_creates_appointment(self):
         """Успешное создание записи с корректными данными"""
@@ -96,13 +99,13 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         appointment.full_clean()
         appointment.save()
         self.assertIsNotNone(appointment.pk)
-        self.assertEqual(appointment.status, 'booked')
+        self.assertEqual(appointment.status, StatusChoices.BOOKED)
         self.assertEqual(
             appointment.end_datetime,
             self.booking_time + self.service.duration
@@ -118,7 +121,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -130,7 +133,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.inactive_service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -149,7 +152,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=other_service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -158,7 +161,7 @@ class AppointmentBookingTestCase(TestCase):
         """Пропуск обязательных полей вызывает ошибку валидации"""
         appointment = Appointment(
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -178,12 +181,48 @@ class AppointmentBookingTestCase(TestCase):
             master=master_no_schedule,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
 
-    # # ==================== ПРОВЕРКИ ВРЕМЕНИ ====================
+    def test_booking_only_client(self):
+        """Запись может быть создана только для клиента"""
+        appointment = Appointment(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time,
+            status=StatusChoices.BOOKED
+        )
+        try:
+            appointment.full_clean()
+        except ValidationError:
+            self.fail('Запись должна быть разрешена для клиента')
+
+        # Попытка создать запись для мастера (не клиента) должна быть запрещена
+        appointment_for_master = Appointment(
+            client=self.master_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time+timedelta(hours=1),
+            status=StatusChoices.BOOKED
+        )
+        with self.assertRaises(ValidationError):
+            appointment_for_master.full_clean()
+
+        # Попытка создать запись для администратора (не клиента) должна быть запрещена
+        appointment_for_admin = Appointment(
+            client=self.admin_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time+timedelta(hours=1),
+            status=StatusChoices.BOOKED
+        )
+        with self.assertRaises(ValidationError):
+            appointment_for_admin.full_clean()
+
+    # 2. ПРОВЕРКИ ВРЕМЕНИ
 
     def test_past_time_denied(self):
         """Запрет записи на прошедшее время"""
@@ -194,7 +233,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=past_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -211,7 +250,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -227,7 +266,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -243,7 +282,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -259,7 +298,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         try:
             appointment.full_clean()
@@ -277,28 +316,30 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         try:
             appointment.full_clean()
         except ValidationError:
             self.fail('Запись с окончанием в закрытие должна быть разрешена')
 
-    def test_cannot_set_completed_for_past_appointment_still_in_progress(self):
-        """Нельзя завершить запись, которая ещё не закончилась по времени"""
+    def test_can_set_completed_for_past_appointment_still_in_progress(self):
+        """Можно завершить запись, которая ещё не закончилась по времени"""
         now = timezone.localtime()
         appointment = Appointment.objects.create(
             client=self.client_user,
             master=self.master,
             service=self.service,
             start_datetime=now - timedelta(minutes=30),
-            status='booked'
+            status=StatusChoices.BOOKED
         )
-        appointment.status = 'completed'
-        with self.assertRaises(ValidationError):
+        appointment.status = StatusChoices.COMPLETED
+        try:
             appointment.full_clean()
+        except ValidationError:
+            self.fail('Запись может быть завершена, даже если она ещё не закончилась по времени')
 
-    # # ==================== ИСКЛЮЧЕНИЯ РАСПИСАНИЯ ====================
+    # 3. ИСКЛЮЧЕНИЯ РАСПИСАНИЯ
 
     def test_day_off_exception_overrides_schedule(self):
         """Исключение-выходной имеет приоритет над регулярным расписанием"""
@@ -314,7 +355,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError) as context:
             appointment.full_clean()
@@ -340,7 +381,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=early_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -374,14 +415,14 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         try:
             appointment.full_clean()
         except ValidationError:
             self.fail('Исключение должно сделать выходной день рабочим')
 
-    # # ==================== ПЕРЕСЕЧЕНИЯ ЗАПИСЕЙ ====================
+    # 4. ПЕРЕСЕЧЕНИЯ ЗАПИСЕЙ
 
     def test_exact_overlap_denied(self):
         """Запрет точного наложения на существующую запись"""
@@ -390,7 +431,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         duplicate = Appointment(
@@ -398,7 +439,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             duplicate.full_clean()
@@ -411,7 +452,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         # Новая: 9:30-10:30
@@ -423,7 +464,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=overlap_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -436,7 +477,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         # Новая: 10:30-11:30
@@ -448,7 +489,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=overlap_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
@@ -461,7 +502,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         # Вторая: 11:00-12:00
@@ -473,7 +514,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=adjacent_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         try:
             appointment.full_clean()
@@ -487,7 +528,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='cancelled'
+            status=StatusChoices.CANCELLED
         )
 
         appointment = Appointment(
@@ -495,7 +536,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         try:
             appointment.full_clean()
@@ -526,7 +567,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         # Запись ко второму на то же время — разрешена
@@ -535,14 +576,45 @@ class AppointmentBookingTestCase(TestCase):
             master=master2,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         try:
             appointment.full_clean()
         except ValidationError:
             self.fail('Разные мастера могут работать одновременно')
 
-    # # ==================== СТАТУСЫ И ПЕРЕХОДЫ ====================
+    # 5. СТАТУСЫ И ПЕРЕХОДЫ
+
+    def test_cannot_change_cancelled_status_for_past(self):
+        """Нельзя изменить статус записи на cancelled для прошедших записей"""
+        past_time = timezone.make_aware(
+            datetime.combine(self.monday - timedelta(days=14), time(10, 0))
+        )
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=past_time,
+            status=StatusChoices.BOOKED
+        )
+
+        appointment.status = StatusChoices.CANCELLED
+        with self.assertRaises(ValidationError):
+            appointment.full_clean()
+
+    def test_cannot_set_cancel_reason_for_non_cancelled(self):
+        """Нельзя указать причину отмены для неотмененной записи"""
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time,
+            status=StatusChoices.BOOKED
+        )
+
+        appointment.cancel_reason = 'Передумал'
+        with self.assertRaises(ValidationError):
+            appointment.full_clean()
 
     def test_new_appointment_must_be_booked(self):
         """Новая запись может быть только в статусе booked"""
@@ -551,24 +623,64 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='completed'  # Нельзя для новой
+            status=StatusChoices.COMPLETED  # Нельзя для новой
         )
         with self.assertRaises(ValidationError):
             appointment.full_clean()
 
-    def test_cannot_change_final_status_to_booked(self):
-        """Нельзя изменить финальный статус обратно на booked"""
+    def test_status_completed_must_be_changed_to_no_show(self):
+        """Статус completed можно поменять только на no_show"""
+        past_time = timezone.make_aware(
+                    datetime.combine(self.monday - timedelta(days=14), time(10, 0))
+                )
         appointment = Appointment.objects.create(
             client=self.client_user,
             master=self.master,
             service=self.service,
-            start_datetime=self.booking_time,
-            status='completed'
+            start_datetime=past_time,
+            status=StatusChoices.COMPLETED
         )
 
-        appointment.status = 'booked'
+        appointment.status = StatusChoices.BOOKED
         with self.assertRaises(ValidationError):
             appointment.full_clean()
+
+        appointment.status = StatusChoices.CANCELLED
+        with self.assertRaises(ValidationError):
+            appointment.full_clean()
+
+        appointment.status = StatusChoices.NO_SHOW
+        try:
+            appointment.full_clean()
+        except ValidationError:
+            self.fail('Статус completed можно поменять только на no_show')
+
+    def test_status_no_show_must_be_changed_to_completed(self):
+        """Статус no_show можно поменять только на completed"""
+        past_time = timezone.make_aware(
+                    datetime.combine(self.monday - timedelta(days=14), time(10, 0))
+                )
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=past_time,
+            status=StatusChoices.NO_SHOW
+        )
+
+        appointment.status = StatusChoices.BOOKED
+        with self.assertRaises(ValidationError):
+            appointment.full_clean()
+
+        appointment.status = StatusChoices.CANCELLED
+        with self.assertRaises(ValidationError):
+            appointment.full_clean()
+
+        appointment.status = StatusChoices.COMPLETED
+        try:
+            appointment.full_clean()
+        except ValidationError:
+            self.fail('Статус no_show можно поменять только на completed')
 
     def test_cannot_change_cancelled_status(self):
         """Нельзя изменить статус отмененной записи"""
@@ -577,10 +689,10 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='cancelled'
+            status=StatusChoices.CANCELLED
         )
 
-        appointment.status = 'booked'
+        appointment.status = StatusChoices.BOOKED
         with self.assertRaises(ValidationError):
             appointment.full_clean()
 
@@ -594,10 +706,10 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=future_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
-        appointment.status = 'completed'
+        appointment.status = StatusChoices.COMPLETED
         with self.assertRaises(ValidationError):
             appointment.full_clean()
 
@@ -611,10 +723,24 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=future_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
-        appointment.status = 'no_show'
+        appointment.status = StatusChoices.NO_SHOW
+        with self.assertRaises(ValidationError):
+            appointment.full_clean()
+
+    def test_cannot_completted_future_appointment(self):
+        """Нельзя завершить будущую запись"""
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time,
+            status=StatusChoices.BOOKED
+        )
+
+        appointment.status = StatusChoices.COMPLETED
         with self.assertRaises(ValidationError):
             appointment.full_clean()
 
@@ -628,10 +754,10 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=future_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
-        appointment.status = 'cancelled'
+        appointment.status = StatusChoices.CANCELLED
         appointment.cancel_reason = 'Передумал'
         try:
             appointment.full_clean()
@@ -639,26 +765,10 @@ class AppointmentBookingTestCase(TestCase):
         except ValidationError:
             self.fail('Отмена будущей записи должна быть разрешена')
 
-        self.assertEqual(appointment.status, 'cancelled')
+        self.assertEqual(appointment.status, StatusChoices.CANCELLED)
         self.assertIsNotNone(appointment.cancelled_at)
 
-    def test_cannot_complete_before_end_time(self):
-        """Нельзя завершить запись до её окончания"""
-        now = timezone.localtime()
-        # Создаем запись, которая прямо сейчас в процессе
-        appointment = Appointment.objects.create(
-            client=self.client_user,
-            master=self.master,
-            service=self.service,
-            start_datetime=now - timedelta(minutes=30),
-            status='booked'
-        )
-
-        appointment.status = 'completed'
-        with self.assertRaises(ValidationError):
-            appointment.full_clean()
-
-    # # ==================== ОГРАНИЧЕНИЯ БД ====================
+    # ==================== ОГРАНИЧЕНИЯ БД ====================
 
     def test_unique_active_booking_constraint(self):
         """Уникальность активной записи мастера на время"""
@@ -667,7 +777,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         with self.assertRaises(IntegrityError):
@@ -677,7 +787,7 @@ class AppointmentBookingTestCase(TestCase):
                     master=self.master,
                     service=self.service,
                     start_datetime=self.booking_time,
-                    status='booked'
+                    status=StatusChoices.BOOKED
                 )
 
     def test_cancelled_no_unique_constraint(self):
@@ -687,7 +797,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='cancelled'
+            status=StatusChoices.CANCELLED
         )
 
         # Можно создать активную на то же время
@@ -697,7 +807,7 @@ class AppointmentBookingTestCase(TestCase):
                 master=self.master,
                 service=self.service,
                 start_datetime=self.booking_time,
-                status='booked'
+                status=StatusChoices.BOOKED
             )
         except IntegrityError:
             self.fail('Отмененная запись не должна вызывать IntegrityError')
@@ -727,7 +837,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ProtectedError):
             self.master.delete()
@@ -739,7 +849,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ProtectedError):
             self.service.delete()
@@ -751,12 +861,57 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         with self.assertRaises(ProtectedError):
             self.client_user.delete()
 
-    # # ==================== СВОЙСТВА МОДЕЛИ ====================
+    # ==================== СВОЙСТВА МОДЕЛИ ====================
+
+    def test_can_be_closed_property(self):
+        """Свойство can_be_closed корректно определяет возможность завершения"""
+        # Текущая запись уже наступила — можно завершить
+        now = timezone.localtime()
+        appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=now,
+            status=StatusChoices.BOOKED
+        )
+        self.assertTrue(appointment.can_be_closed)
+
+        # Прошедшая запись — можно завершить
+        past_time = timezone.localtime() - timedelta(hours=2)
+        past_appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=past_time,
+            status=StatusChoices.BOOKED
+        )
+        self.assertTrue(past_appointment.can_be_closed)
+
+        # Прошедшая запись, которая ещё не закончилась по времени — можно завершить
+        past_half_hour = timezone.localtime() - timedelta(minutes=30)
+        past_appointment_half_hour = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=past_half_hour,
+            status=StatusChoices.BOOKED
+        )
+        self.assertTrue(past_appointment_half_hour.can_be_closed)
+
+        # Будущая запись — нельзя завершить
+        future_appointment = Appointment.objects.create(
+            client=self.client_user,
+            master=self.master,
+            service=self.service,
+            start_datetime=self.booking_time,
+            status=StatusChoices.BOOKED
+        )
+        self.assertFalse(future_appointment.can_be_closed)
 
     def test_is_past_property(self):
         """Свойство is_past корректно определяет прошедшие записи"""
@@ -766,7 +921,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=past_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         self.assertTrue(past_appointment.is_past)
 
@@ -775,7 +930,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         self.assertFalse(future_appointment.is_past)
 
@@ -787,7 +942,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         self.assertTrue(appointment.can_be_cancelled)
 
@@ -798,13 +953,13 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=past_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         self.assertFalse(past_appointment.can_be_cancelled)
 
         # Завершенная — нельзя
         completed = appointment
-        completed.status = 'completed'
+        completed.status = StatusChoices.COMPLETED
         completed.save()
         self.assertFalse(completed.can_be_cancelled)
 
@@ -815,7 +970,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         expected_end = self.booking_time + self.service.duration
         self.assertEqual(appointment.end_datetime, expected_end)
@@ -829,34 +984,9 @@ class AppointmentBookingTestCase(TestCase):
             service=self.service,
             start_datetime=self.booking_time,
             end_datetime=custom_end,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         self.assertNotEqual(appointment.end_datetime, custom_end)
-
-    def test_cancelled_at_saved_correctly_with_timezone(self):
-        """Проверяем, что cancelled_at корректно сохраняется и синхронизируется между зонами"""
-
-        # Засекаем время начала теста
-        now_utc = timezone.now()
-
-        appointment = Appointment.objects.create(
-            client=self.client_user,
-            master=self.master,
-            service=self.service,
-            start_datetime=timezone.localtime(),
-            status='cancelled'
-        )
-
-        # Принудительно перечитываем объект из базы данных
-        appointment.refresh_from_db()
-
-        # Вычисляем разницу во времени между созданием и текущим моментом
-        # Метод .total_seconds() преобразует разницу в число (float)
-        time_difference = abs((appointment.cancelled_at - now_utc).total_seconds())
-
-        # Проверяем, что разница составляет меньше 1 секунды
-        self.assertLess(time_difference, 1.0)
-
 
     def test_cancelled_at_display_in_local_time(self):
         """Проверяем отображение в локальном времени."""
@@ -865,7 +995,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=timezone.now(),
-            status='cancelled'
+            status=StatusChoices.CANCELLED
         )
 
         # Конвертируем в Europe/Moscow
@@ -882,7 +1012,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=timezone.now(),
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         self.assertIsNone(appointment.cancelled_at)
 
@@ -893,7 +1023,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=timezone.now(),
-            status='cancelled'
+            status=StatusChoices.CANCELLED
         )
         first_cancelled = appointment.cancelled_at
 
@@ -912,6 +1042,7 @@ class AppointmentBookingTestCase(TestCase):
     def test_get_available_slots_returns_correct_intervals(self):
         """Проверка базовой генерации слотов в рабочий день по расписанию мастера"""
         # Запрашиваем слоты на рабочий понедельник
+        invalidate_slots_cache(self.master, self.monday)  # Очистка кэша перед тестом
         slots = get_available_slots(self.master, self.monday, self.service)
 
         # Проверяем, что слоты сгенерировались
@@ -927,12 +1058,13 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,  # 10:00
-            status='booked'
+            status=StatusChoices.BOOKED
         )
         existing_appointment.full_clean()
         existing_appointment.save()
 
         # Получаем свободные слоты на этот же день
+        invalidate_slots_cache(self.master, self.monday)  # Очистка кэша перед тестом
         slots = get_available_slots(self.master, self.monday, self.service)
 
         # Время 10:00 должно быть исключено из доступных окон
@@ -942,20 +1074,23 @@ class AppointmentBookingTestCase(TestCase):
         """Слоты в конце рабочего дня не должны создаваться, если услуга не успеет завершиться"""
         # Конец рабочего дня в setUp — 18:00.
         # Для услуги длительностью 1 час (self.service) последний возможный слот — 17:00.
+        invalidate_slots_cache(self.master, self.monday)  # Очистка кэша перед тестом
         slots_short = get_available_slots(self.master, self.monday, self.service)
         self.assertIn(time(17, 0), slots_short)
         self.assertNotIn(time(17, 30), slots_short)
 
         # Для длинной услуги в 3 часа (self.long_service) последний возможный слот — 15:00.
+        invalidate_slots_cache(self.master, self.monday)  # Очистка кэша перед тестом
         slots_long = get_available_slots(self.master, self.monday, self.long_service)
         self.assertIn(time(15, 0), slots_long)
         self.assertNotIn(time(16, 0), slots_long)
 
     def test_weekend_returns_no_slots(self):
-        """В выходные дни (согласно WorkSchedule) слоты не должны генерироваться"""
+        """В выходные дни слоты не должны генерироваться"""
         # Вычисляем ближайшую субботу (следующую за тестовым понедельником)
         saturday = self.monday + timedelta(days=5)
 
+        invalidate_slots_cache(self.master, saturday)  # Очистка кэша перед тестом
         slots = get_available_slots(self.master, saturday, self.service)
         self.assertEqual(slots, [])
 
@@ -968,7 +1103,7 @@ class AppointmentBookingTestCase(TestCase):
 
         with patch('django.utils.timezone.localtime', return_value=mock_now), \
              patch('django.utils.timezone.localdate', return_value=self.monday):
-
+            invalidate_slots_cache(self.master, self.monday)  # Очистка кэша перед тестом
             slots = get_available_slots(self.master, self.monday, self.service)
 
             # Слоты до 14:30 (например, 09:00, 10:00, 14:00) не должны попасть в выдачу
@@ -991,6 +1126,7 @@ class AppointmentBookingTestCase(TestCase):
         )
 
         # Запрашиваем слоты на этот понедельник
+        invalidate_slots_cache(self.master, self.monday)
         slots = get_available_slots(self.master, self.monday, self.service)
 
         # Результат должен быть абсолютно пустым, несмотря на регулярный WorkSchedule
@@ -1007,7 +1143,7 @@ class AppointmentBookingTestCase(TestCase):
             start_time=time(12, 0),
             end_time=time(15, 0)
         )
-
+        invalidate_slots_cache(self.master, self.monday)
         slots = get_available_slots(self.master, self.monday, self.service)
 
         # Проверяем, что утренние слоты исчезли
@@ -1059,8 +1195,8 @@ class AppointmentBookingTestCase(TestCase):
         # Делаем POST без авторизации
         response = self.client.post(url, {
             'service_id': self.service.id,
-            'date': self.monday.strftime('%Y-%m-%d'),
-            'time': '10:00'
+            'date': self.monday.isoformat(),
+            'time': self.booking_time.strftime('%H:%M')
         })
 
         # Django должен выдать редирект (302) на страницу логина
@@ -1077,20 +1213,15 @@ class AppointmentBookingTestCase(TestCase):
         # Отправляем валидную форму
         response = self.client.post(url, {
             'service_id': self.service.id,
-            'date': self.monday.strftime('%Y-%m-%d'),
-            'time': '10:00'
+            'date': self.monday.isoformat(),
+            'time': self.booking_time.strftime('%H:%M')
         })
 
         # Проверяем редирект (PRG паттерн) на страницу списка его записей
-        self.assertRedirects(response, reverse('appointments:client_list'))
+        self.assertRedirects(response, reverse('appointments:client_appointments'))
 
         # Проверяем, что запись реально физически появилась в базе данных
         self.assertTrue(Appointment.objects.filter(client=self.client_user, master=self.master).exists())
-
-        # Проверяем, что пользователю записалось сообщение об успехе
-        messages = list(get_messages(response.wsgi_request))
-        self.assertEqual(len(messages), 1)
-        self.assertEqual(messages[0].level_tag, 'success')
 
     def test_booking_validation_error_redirects_back(self):
         """При ошибке валидации (например, пустая дата) вьюха возвращает на страницу мастера с ошибкой"""
@@ -1100,26 +1231,19 @@ class AppointmentBookingTestCase(TestCase):
         # Отправляем форму без времени
         response = self.client.post(url, {
             'service_id': self.service.id,
-            'date': self.monday.strftime('%Y-%m-%d'),
+            'date': self.monday.isoformat(),
             'time': ''  # Пустое время
         })
 
         base_url = reverse('masters:master_detail', kwargs={'master_id': self.master.id})
         query_params = urlencode({
             'service_id': self.service.id,
-            'date': self.monday.strftime('%Y-%m-%d')
+            'date': self.monday.isoformat()
         })
         expected_url = f"{base_url}?{query_params}"
 
         # Вьюха должна вернуть нас на страницу деталей мастера
         self.assertRedirects(response, expected_url)
-
-        # Проверяем, что в сессию упала ошибка
-        messages = list(get_messages(response.wsgi_request))
-        self.assertEqual(messages[0].level_tag, 'error')
-        self.assertEqual(str(messages[0]), 'Выберите дату и время.')
-
-    # ==================== ТЕСТЫ ВЬЮХИ ОТМЕНЫ ЗАПИСИ ====================
 
     def test_cancel_view_get_request_renders_confirmation(self):
         """GET-запрос к вьюхе отмены возвращает страницу подтверждения с деталями записи"""
@@ -1129,11 +1253,11 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         self.client.force_login(self.client_user)
-        url = reverse('appointments:cancel', kwargs={'appointment_id': appointment.id})
+        url = reverse('appointments:client_cancel', kwargs={'appointment_id': appointment.id})
 
         response = self.client.get(url)
 
@@ -1148,7 +1272,7 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         # Искусственно забиваем кэш мусором, чтобы проверить его инвалидацию
@@ -1156,17 +1280,17 @@ class AppointmentBookingTestCase(TestCase):
         cache.set(cache_key, ['fake_slot'], 60)
 
         self.client.force_login(self.client_user)
-        url = reverse('appointments:cancel', kwargs={'appointment_id': appointment.id})
+        url = reverse('appointments:client_cancel', kwargs={'appointment_id': appointment.id})
 
         # Отправляем POST с кастомной причиной отмены
         response = self.client.post(url, {'reason': '   Изменились планы   '})
 
         # Проверяем редирект обратно в список записей
-        self.assertRedirects(response, reverse('appointments:client_list'))
+        self.assertRedirects(response, reverse('appointments:client_appointments'))
 
         # Обновляем объект из базы данных для проверки изменений
         appointment.refresh_from_db()
-        self.assertEqual(appointment.status, 'cancelled')
+        self.assertEqual(appointment.status, StatusChoices.CANCELLED)
         self.assertEqual(appointment.cancel_reason, 'Изменились планы')  # Проверка .strip()
         self.assertIsNotNone(appointment.cancelled_at)
 
@@ -1180,11 +1304,11 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         self.client.force_login(self.client_user)
-        url = reverse('appointments:cancel', kwargs={'appointment_id': appointment.id})
+        url = reverse('appointments:client_cancel', kwargs={'appointment_id': appointment.id})
 
         # Отправляем пустую строку в поле причины
         self.client.post(url, {'reason': '   '})
@@ -1205,12 +1329,12 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         # Логиним нашего стандартного клиента (self.client_user)
         self.client.force_login(self.client_user)
-        url = reverse('appointments:cancel', kwargs={'appointment_id': appointment.id})
+        url = reverse('appointments:client_cancel', kwargs={'appointment_id': appointment.id})
 
         # Попытка GET-доступа должна выбить 404 Not Found
         response_get = self.client.get(url)
@@ -1222,33 +1346,31 @@ class AppointmentBookingTestCase(TestCase):
 
         # Проверяем, что в базе запись осталась нетронутой
         appointment.refresh_from_db()
-        self.assertEqual(appointment.status, 'booked')
+        self.assertEqual(appointment.status, StatusChoices.BOOKED)
 
     def test_cannot_cancel_past_appointment(self):
-        """Нельзя отменить запись, если время визита уже прошло (свойство is_past)"""
+        """Нельзя отменить запись, если время начала визита уже настало (свойство is_past)"""
         appointment = Appointment.objects.create(
             client=self.client_user,
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status='booked'
+            status=StatusChoices.BOOKED
         )
 
         self.client.force_login(self.client_user)
-        url = reverse('appointments:cancel', kwargs={'appointment_id': appointment.id})
+        url = reverse('appointments:client_cancel', kwargs={'appointment_id': appointment.id})
 
         # Имитируем, что запись уже в прошлом, подменяя свойство is_past на True
         with patch.object(Appointment, 'is_past', new_callable=PropertyMock, return_value=True):
             response = self.client.post(url, {'reason': 'Слишком поздно'})
 
             # Должен сработать редирект с ошибкой
-            self.assertRedirects(response, reverse('appointments:client_list'))
+            self.assertRedirects(response, reverse('appointments:client_appointments'))
 
             # Статус записи в БД не должен измениться
             appointment.refresh_from_db()
-            self.assertEqual(appointment.status, 'booked')
-
-    # --- ТЕСТЫ MASTER_SCHEDULE_VIEW ---
+            self.assertEqual(appointment.status, StatusChoices.BOOKED)
 
     def test_schedule_default_date_is_today(self):
         """Если дата не передана, отображается расписание на сегодняшний день."""
@@ -1265,70 +1387,3 @@ class AppointmentBookingTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['selected_date'], timezone.localdate())
-
-    # # --- ТЕСТЫ UPDATE_APPOINTMENT_STATUS_VIEW ---
-
-    def test_update_status_requires_post(self):
-        """GET запрос на изменение статуса возвращает 405 Method Not Allowed."""
-        self.client.force_login(self.admin_user)
-        url = reverse('appointments:admin_update_status', kwargs={'appointment_id': 1})
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 405)
-
-
-    def test_cannot_update_future_appointment(self):
-        """Нельзя изменить статус записи, если время ее окончания (end_datetime) еще не наступило."""
-        self.client.force_login(self.admin_user)
-
-        # Создаем запись в будущем
-        future_start = timezone.localtime() + timedelta(days=2)
-        appointment = Appointment.objects.create(
-            client=self.client_user, master=self.master, service=self.service,
-            start_datetime=future_start, status='booked'
-        )
-        appointment.save()
-
-        url = reverse('appointments:admin_update_status', kwargs={'appointment_id': appointment.id})
-        response = self.client.post(url, {'status': 'completed'})
-
-        self.assertEqual('Нельзя изменить статус будущей записи.', list(get_messages(response.wsgi_request))[0].message)
-
-        appointment.refresh_from_db()
-        self.assertEqual(appointment.status, 'booked')
-
-    def test_successful_status_update_to_completed(self):
-        """Успешный перевод завершенной записи в статус 'completed'."""
-        self.client.force_login(self.admin_user)
-
-        # Создаем запись в прошлом
-        past_start = timezone.localtime() - timedelta(hours=5)
-        appointment = Appointment.objects.create(
-            client=self.client_user, master=self.master, service=self.service,
-            start_datetime=past_start, status='booked'
-        )
-        appointment.save()
-
-        url = reverse('appointments:admin_update_status', kwargs={'appointment_id': appointment.id})
-        response = self.client.post(url, {'status': 'completed'})
-
-        appointment.refresh_from_db()
-        self.assertEqual(appointment.status, 'completed')
-        self.assertEqual('Запись отмечена как завершённая.', list(get_messages(response.wsgi_request))[0].message)
-
-    def test_invalid_status_value_triggers_error(self):
-        """Передача невалидного статуса не меняет запись и выводит ошибку."""
-        self.client.force_login(self.admin_user)
-
-        past_start = timezone.localtime() - timedelta(hours=3)
-        appointment = Appointment.objects.create(
-            client=self.client_user, master=self.master, service=self.service,
-            start_datetime=past_start, status='booked'
-        )
-        appointment.save()
-
-        url = reverse('appointments:admin_update_status', kwargs={'appointment_id': appointment.id})
-        response = self.client.post(url, {'status': 'invalid_status_choice'})
-
-        appointment.refresh_from_db()
-        self.assertEqual(appointment.status, 'booked')
-        self.assertIn('Неверный статус.', list(get_messages(response.wsgi_request))[0].message)

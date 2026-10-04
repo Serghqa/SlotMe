@@ -47,7 +47,7 @@ class Service(ServiceValidationMixin, models.Model):
         return f'{m} мин'
 
     def __str__(self):
-        return f"{self.name} — {self.price:.0f}₽ ({self.duration_display})"
+        return f"{self.name} — {self.price:.0f} ₽ ({self.duration_display})"
 
     def clean(self):
         super().clean()

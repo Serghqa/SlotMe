@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.utils import timezone
 from datetime import datetime
+from apps.core.choices import StatusChoices
 from apps.core.services import invalidate_slots_cache
 from apps.core.utils import get_paginated_page, get_next_url
 
@@ -60,6 +61,9 @@ def services_by_master_view(request, master_id):
 @admin_required
 @require_POST
 def update_appointment_status_view(request, appointment_id):
+    """
+    Обновление статуса записи.
+    """
     appointment = get_object_or_404(
         Appointment,
         id=appointment_id,
@@ -67,16 +71,14 @@ def update_appointment_status_view(request, appointment_id):
 
     to_appointments_url = get_next_url(request, reverse('admin_panel:appointment_list'))
 
-    if appointment.status != 'booked':
-        messages.error(request, 'Можно изменить статус только забронированной записи.')
-        return redirect(to_appointments_url)
-
-    if appointment.end_datetime > timezone.now():
-        messages.error(request, 'Нельзя изменить статус записи до ее завершения.')
-        return redirect(to_appointments_url)
+    if not appointment.can_be_closed:
+        if not appointment.is_past:
+            messages.error(request, 'Статус будущей записи менять запрещено.')
+        else:
+            messages.error(request, 'Возможно запись уже отменена, невозможно поменять статус.')
 
     new_status = request.POST.get('status')
-    if new_status not in ['completed', 'no_show']:
+    if new_status not in [StatusChoices.BOOKED, StatusChoices.COMPLETED, StatusChoices.NO_SHOW]:
         messages.error(request, 'Неверный статус.')
         return redirect(to_appointments_url)
 
@@ -90,9 +92,9 @@ def update_appointment_status_view(request, appointment_id):
         messages.error(request, 'Ошибка базы данных. Попробуйте позже.')
         return redirect(to_appointments_url)
 
-    if new_status == 'completed':
+    if appointment.is_completed:
         messages.success(request, 'Запись отмечена как завершённая.')
-    elif new_status == 'no_show':
+    elif appointment.is_no_show:
         messages.warning(request, 'Запись отмечена как неявка.')
 
     return redirect(to_appointments_url)
@@ -104,7 +106,7 @@ def appointment_list_view(request):
     master_id = request.GET.get('master')
     status = request.GET.get('status')
 
-    valid_stutus = [s[0] for s in Appointment.STATUS_CHOICES]
+    valid_stutus = [s[0] for s in StatusChoices.choices]
 
     now = timezone.localtime()
 
@@ -139,7 +141,7 @@ def appointment_list_view(request):
         'selected_date': date_str or '',
         'selected_master': master_id or '',
         'selected_status': status or '',
-        'status_choices': Appointment.STATUS_CHOICES,
+        'status_choices': StatusChoices.choices,
         'now': now,
     }
     return render(request, 'admin_panel/appointment_list.html', context)
@@ -156,7 +158,7 @@ def cancel_appointment_view(request, appointment_id):
 
     if request.method == 'POST':
         if not appointment.can_be_cancelled:
-            if appointment.status == 'cancelled':
+            if appointment.is_cancelled:
                 messages.error(request, 'Запись уже отменена.')
             elif appointment.is_past:
                 messages.error(request, 'Нельзя отменить прошедшую или уже начавшуюся запись.')
@@ -165,7 +167,7 @@ def cancel_appointment_view(request, appointment_id):
             return redirect(to_appointments_url)
 
         reason = request.POST.get('reason', '').strip() or 'Отменено администратором'
-        appointment.status = 'cancelled'
+        appointment.status = StatusChoices.CANCELLED
         appointment.cancel_reason = reason[:500]
         appointment.cancelled_at = timezone.now()
         try:
@@ -180,14 +182,14 @@ def cancel_appointment_view(request, appointment_id):
         invalidate_slots_cache(appointment.master, appointment.start_datetime.date())
         messages.success(
             request,
-            f'Запись к мастеру {appointment.master.user.display_name} на '
-            f'{appointment.start_datetime:%d.%m.%Y} в {appointment.start_datetime:%H:%M} успешно отменена.'
+            f"Запись к мастеру {appointment.master.user.display_name} на "
+            f"{appointment.start_datetime:%d.%m.%Y} в {appointment.start_datetime:%H:%M} успешно отменена."
         )
 
         return redirect(to_appointments_url)
 
     context = {
         'appointment': appointment,
-        'to_appointment_list_url': to_appointments_url
+        'to_appointments_url': to_appointments_url
     }
     return render(request, 'appointments/cancel_confirm.html', context)

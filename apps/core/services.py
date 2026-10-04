@@ -2,6 +2,7 @@ from django.apps import apps
 from django.core.cache import cache
 from django.utils import timezone
 from datetime import datetime, date, timedelta
+from apps.core.choices import StatusChoices
 
 
 Appointment = apps.get_model('appointments', 'Appointment')
@@ -49,7 +50,7 @@ def get_available_slots(master: Master, date: date, service: Service):
     busy_queryset = Appointment.objects.filter(
         master=master,
         start_datetime__date=date,
-        status='booked',
+        status=StatusChoices.BOOKED,
         end_datetime__isnull=False,
     ).values_list('start_datetime', 'end_datetime')
     busy_slots_local = [

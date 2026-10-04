@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
+from apps.core.choices import WeekdaysChoices
 from .utils import WorkingHoursMixin
 
 
@@ -43,15 +44,6 @@ class Master(models.Model):
 
 
 class WorkSchedule(WorkingHoursMixin, models.Model):
-    DAY_CHOICES = [
-        (0, 'Понедельник'),
-        (1, 'Вторник'),
-        (2, 'Среда'),
-        (3, 'Четверг'),
-        (4, 'Пятница'),
-        (5, 'Суббота'),
-        (6, 'Воскресенье'),
-    ]
     master = models.ForeignKey(
         Master,
         on_delete=models.CASCADE,
@@ -61,8 +53,7 @@ class WorkSchedule(WorkingHoursMixin, models.Model):
     start_time = models.TimeField(verbose_name='Начало работы', blank=True, null=True)
     end_time = models.TimeField(verbose_name='Конец работы', blank=True, null=True)
     day_of_week = models.PositiveSmallIntegerField(
-        choices=DAY_CHOICES,
-        validators=[MinValueValidator(0), MaxValueValidator(6)],
+        choices=WeekdaysChoices.choices,
         verbose_name='День недели'
     )
     is_working = models.BooleanField(default=True, verbose_name='Рабочий день')
@@ -71,7 +62,12 @@ class WorkSchedule(WorkingHoursMixin, models.Model):
         verbose_name = 'Рабочее расписание'
         verbose_name_plural = 'Рабочие расписания'
         ordering = ['master', 'day_of_week']
-        unique_together = ('master', 'day_of_week')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['master', 'day_of_week'],
+                name='unique_master_day_of_week'
+            )
+        ]
 
     def clean(self):
         super().clean()
@@ -79,8 +75,8 @@ class WorkSchedule(WorkingHoursMixin, models.Model):
 
     def __str__(self):
         if not self.is_working:
-            return f"{self.master} — {self.get_day_of_week_display()}: выходной"
-        return f"{self.master} — {self.get_day_of_week_display()}: {self.start_time:%H:%M}–{self.end_time:%H:%M}"
+            return f"{self.master.user.display_name} — {self.get_day_of_week_display()}: выходной"
+        return f"{self.master.user.display_name} — {self.get_day_of_week_display()}: {self.start_time:%H:%M}–{self.end_time:%H:%M}"
 
 
 class ScheduleException(WorkingHoursMixin, models.Model):
@@ -104,7 +100,12 @@ class ScheduleException(WorkingHoursMixin, models.Model):
         verbose_name = 'Исключение в расписании'
         verbose_name_plural = 'Исключения в расписании'
         ordering = ['master', '-date']
-        unique_together = ('master', 'date')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['master', 'date'],
+                name='unique_master_date'
+            )
+        ]
 
     def clean(self):
         super().clean()
@@ -112,5 +113,5 @@ class ScheduleException(WorkingHoursMixin, models.Model):
 
     def __str__(self):
         if self.is_working:
-            return f"{self.master} — {self.date}: {self.start_time:%H:%M}–{self.end_time:%H:%M}"
-        return f"{self.master} — {self.date}: выходной"
+            return f"{self.master.user.display_name} — {self.date:%d.%m.%Y}: {self.start_time:%H:%M}–{self.end_time:%H:%M}"
+        return f"{self.master.user.display_name} — {self.date:%d.%m.%Y}: выходной"

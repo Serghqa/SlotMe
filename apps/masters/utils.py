@@ -13,7 +13,7 @@ class FilterActiveMasterMixin:
         if db_field.name == "master":
             Master = apps.get_model('masters', 'Master')
 
-            kwargs["queryset"] = Master.objects.filter(is_active=True).select_related('user')
+            kwargs['queryset'] = Master.objects.filter(is_active=True).select_related('user')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 

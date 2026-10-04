@@ -45,13 +45,13 @@
                         <td class="text-nowrap">{{ appointment.start_datetime|date:"d.m.Y" }}</td>
                         <td class="text-nowrap">{{ appointment.start_datetime|date:"H:i" }} — {{ appointment.end_datetime|date:"H:i" }}</td>
                         <td>
-                            {% if appointment.status == 'booked' %}
+                            {% if appointment.is_booked %}
                                 <span class="badge bg-primary">Забронирована</span>
-                            {% elif appointment.status == 'completed' %}
+                            {% elif appointment.is_completed %}
                                 <span class="badge bg-success">Завершена</span>
-                            {% elif appointment.status == 'cancelled' %}
+                            {% elif appointment.is_cancelled %}
                                 <span class="badge bg-danger">Отменена</span>
-                            {% elif appointment.status == 'no_show' %}
+                            {% elif appointment.is_no_show %}
                                 <span class="badge bg-warning">Неявка</span>
                             {% endif %}
                         </td>

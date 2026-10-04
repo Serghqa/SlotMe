@@ -17,7 +17,7 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user, backend='apps.users.backend.EmailAuthBackend')
-            messages.success(request, f'Регистрация прошла успешно! Добро пожаловать, {user.display_name}!')
+            messages.success(request, f"Регистрация прошла успешно! Добро пожаловать, {user.display_name}!")
             return redirect('users:profile')
     else:
         form = RegistrationForm()

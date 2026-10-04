@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from apps.core.decorators import master_required
 from apps.core.services import invalidate_slots_cache
 from apps.core.utils import get_paginated_page, get_url_with_params, get_next_url
+from apps.core.choices import StatusChoices
 from .models import Appointment
 
 
@@ -79,7 +80,7 @@ def book_appointment_view(request, master_id):
                 master=master,
                 start_datetime__lt=end_datetime,
                 end_datetime__gt=start_datetime,
-                status='booked'
+                status=StatusChoices.BOOKED
             ).exists()
 
             if not overlapping:
@@ -106,8 +107,8 @@ def book_appointment_view(request, master_id):
 
     messages.success(
         request,
-        f'Вы записаны к {master.user.display_name} '
-        f'на {start_datetime:%d.%m.%Y} в {start_datetime:%H:%M}.'
+        f"Вы записаны к {master.user.display_name} "
+        f"на {start_datetime:%d.%m.%Y} в {start_datetime:%H:%M}."
     )
     return redirect('appointments:client_appointments')
 
@@ -125,21 +126,18 @@ def client_appointments_view(request):
     tab = request.GET.get('tab', 'upcoming')
     if tab not in ('upcoming', 'past'):
         tab = 'upcoming'
-    now = timezone.localtime()
+    now = timezone.now()
 
     # Фильтруем данные в зависимости от выбранной вкладки
     if tab == 'past':
-        # Прошедшими считаются записи:
-        # Либо у них финальный статус (completed, cancelled, no_show)
-        # Либо статус все еще 'booked', но время окончания приема (start_datetime + duration) УЖЕ В ПРОШЛОМ
-        appointments_queryset = appointments_queryset.filter(
-            Q(status__in=['completed', 'cancelled', 'no_show']) |
-            Q(status='booked', end_datetime__lt=now)
+        appointments_queryset = appointments_queryset.exclude(
+            status=StatusChoices.BOOKED,
+            start_datetime__gte = now
         )
     else:
         appointments_queryset = appointments_queryset.filter(
-            status='booked',
-            end_datetime__gte=now
+            status=StatusChoices.BOOKED,
+            start_datetime__gte=now
         )
 
     page = request.GET.get('page', 1)
@@ -171,7 +169,7 @@ def client_cancel_appointment_view(request, appointment_id):
 
     if request.method == 'POST':
         reason = request.POST.get('reason', '').strip() or 'Отменено клиентом'
-        appointment.status = 'cancelled'
+        appointment.status = StatusChoices.CANCELLED
         appointment.cancel_reason = reason[:500]
         appointment.cancelled_at = timezone.now()
         appointment.save()
@@ -181,8 +179,8 @@ def client_cancel_appointment_view(request, appointment_id):
 
         messages.success(
             request,
-            f'Запись к мастеру {appointment.master.user.display_name} на '
-            f'{appointment.start_datetime:%d.%m.%Y} в {appointment.start_datetime:%H:%M} успешно отменена.'
+            f"Запись к мастеру {appointment.master.user.display_name} на "
+            f"{appointment.start_datetime:%d.%m.%Y} в {appointment.start_datetime:%H:%M} успешно отменена."
         )
         return redirect(to_appointments_url)
 

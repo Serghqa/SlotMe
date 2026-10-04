@@ -32,8 +32,8 @@ class MasterAdmin(ReadonlyFieldOnEditMixin, admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Показывает в выпадающем списке только пользователей без привязки к мастеру."""
-        if db_field.name == "user":
-            kwargs["queryset"] = User.objects.filter(
+        if db_field.name == 'user':
+            kwargs['queryset'] = User.objects.filter(
                 master_profile__isnull=True,
                 appointments__isnull=True,
                 is_superuser=False,

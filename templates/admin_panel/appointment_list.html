@@ -64,27 +64,27 @@
                     <tr>
                         <td class="text-muted">#{{ appointment.id }}</td>
                         <td>{{ appointment.start_datetime|date:"d.m.Y" }}</td>
-                        <td>{{ appointment.start_datetime|date:"H:i" }}</td>
+                        <td>{{ appointment.start_datetime|date:"H:i" }}-{{ appointment.end_datetime|date:"H:i" }}</td>
                         <td>{{ appointment.client.display_name }}</td>
                         <td>{{ appointment.master.user.display_name }}</td>
                         <td>{{ appointment.service.name }}</td>
                         <td class="fw-bold text-primary">{{ appointment.service.price|floatformat:0 }} ₽</td>
                         <td>
-                            {% if appointment.status == 'booked' %}
+                            {% if appointment.is_booked %}
                                 <span class="badge bg-primary">Забронирована</span>
-                            {% elif appointment.status == 'completed' %}
+                            {% elif appointment.is_completed %}
                                 <span class="badge bg-success">Завершена</span>
-                            {% elif appointment.status == 'cancelled' %}
+                            {% elif appointment.is_cancelled %}
                                 <span class="badge bg-danger">Отменена</span>
-                            {% elif appointment.status == 'no_show' %}
+                            {% elif appointment.is_no_show %}
                                 <span class="badge bg-warning">Неявка</span>
                             {% endif %}
                         </td>
                         <td>
                             <div class="d-flex gap-1">
-                                {% if appointment.status == 'booked' %}
+                                {% if appointment.is_booked %}
                                     <!-- Кнопка: Завершить -->
-                                    {% if appointment.end_datetime and appointment.end_datetime < now %}
+                                    {% if appointment.can_be_closed %}
                                         <button type="button"
                                             class="btn btn-sm btn-outline-success admin-action-btn"
                                             data-bs-toggle="modal"
@@ -98,7 +98,7 @@
                                         </button>
                                     {% endif %}
                                     <!-- Кнопка: Неявка -->
-                                    {% if appointment.start_datetime < now %}
+                                    {% if appointment.can_be_closed %}
                                         <button type="button"
                                             class="btn btn-sm btn-outline-warning admin-action-btn"
                                             data-bs-toggle="modal"

@@ -26,7 +26,7 @@
                         <td class="text-nowrap">{{ master.user.email }}</td>
                         <td class="text-nowrap">{{ master.user.phone.as_national|default:"—" }}</td>
                         <td>
-                            <a href="{% url 'admin_panel:master_services' master.id %}?next={{ request.get_full_path }}" class="btn btn-sm btn-outline-primary">
+                            <a href="{% url 'admin_panel:master_services' master.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-primary">
                                 Посмотреть услуги ({{ master.services_count }})
                             </a>
                         </td>
