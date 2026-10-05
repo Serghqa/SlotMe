@@ -81,45 +81,60 @@
                             {% endif %}
                         </td>
                         <td>
-                            <div class="d-flex gap-1">
-                                {% if appointment.is_booked %}
-                                    <!-- Кнопка: Завершить -->
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                        aria-label="Действия">
+                                    Действия
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
                                     {% if appointment.can_be_closed %}
-                                        <button type="button"
-                                            class="btn btn-sm btn-outline-success admin-action-btn"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#adminActionModal"
-                                            data-action-url="{% url 'admin_panel:appointment_update_status' appointment.id %}?next={{ request.get_full_path|urlencode }}"
-                                            data-status-value="completed"
-                                            data-title="Завершить запись"
-                                            data-text="Изменить статус записи #{{ appointment.id }} на «Завершена»?"
-                                            data-btn-class="btn-success">
-                                        Завершить
-                                        </button>
+                                        {% if not appointment.is_completed %}
+                                            <li>
+                                                <button type="button"
+                                                        class="dropdown-item text-success admin-action-btn"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#adminActionModal"
+                                                        data-action-url="{% url 'admin_panel:appointment_update_status' appointment.id %}?next={{ request.get_full_path|urlencode }}"
+                                                        data-status-value="completed"
+                                                        data-title="Завершить запись"
+                                                        data-text="Изменить статус записи #{{ appointment.id }} на «Завершена»?"
+                                                        data-btn-class="btn-success">
+                                                    Завершить
+                                                </button>
+                                            </li>
+                                        {% endif %}
+                                        {% if not appointment.is_no_show %}
+                                            <li>
+                                                <button type="button"
+                                                        class="dropdown-item text-warning admin-action-btn"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#adminActionModal"
+                                                        data-action-url="{% url 'admin_panel:appointment_update_status' appointment.id %}?next={{ request.get_full_path|urlencode }}"
+                                                        data-status-value="no_show"
+                                                        data-title="Неявка"
+                                                        data-text="Изменить статус записи #{{ appointment.id }} на «Неявка»?"
+                                                        data-btn-class="btn-warning">
+                                                    Неявка
+                                                </button>
+                                            </li>
+                                        {% endif %}
                                     {% endif %}
-                                    <!-- Кнопка: Неявка -->
-                                    {% if appointment.can_be_closed %}
-                                        <button type="button"
-                                            class="btn btn-sm btn-outline-warning admin-action-btn"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#adminActionModal"
-                                            data-action-url="{% url 'admin_panel:appointment_update_status' appointment.id %}?next={{ request.get_full_path|urlencode }}"
-                                            data-status-value="no_show"
-                                            data-title="Неявка"
-                                            data-text="Изменить статус записи #{{ appointment.id }} на «Неявка»?"
-                                            data-btn-class="btn-warning">
-                                        Неявка
-                                        </button>
-                                    {% endif %}
-                                    <!-- Кнопка: Отменить -->
                                     {% if appointment.can_be_cancelled %}
-                                        <a href="{% url 'admin_panel:appointment_cancel' appointment.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-danger">
-                                            Отменить
-                                        </a>
+                                        <li>
+                                            <a href="{% url 'admin_panel:appointment_cancel' appointment.id %}?next={{ request.get_full_path|urlencode }}" class="dropdown-item text-danger">
+                                                Отменить
+                                            </a>
+                                        </li>
                                     {% endif %}
-                                {% else %}
-                                    <span class="text-muted small">—</span>
-                                {% endif %}
+                                    {% if not appointment.can_be_closed and not appointment.can_be_cancelled %}
+                                        <li>
+                                            <span class="dropdown-item text-muted disabled">Нет действий</span>
+                                        </li>
+                                    {% endif %}
+                                </ul>
                             </div>
                         </td>
                     </tr>

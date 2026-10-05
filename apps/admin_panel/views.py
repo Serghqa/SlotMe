@@ -2,7 +2,7 @@ from django.apps import apps
 from django.db import DatabaseError, IntegrityError
 from django.contrib import messages
 from apps.core.decorators import admin_required
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import redirect, render, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.urls import reverse
@@ -26,7 +26,7 @@ def master_list_view(request):
     masters_queryset = Master.objects\
         .filter(is_active=True)\
             .order_by('user__first_name')\
-                .annotate(services_count=Count('services'))
+                .annotate(services_count=Count('services', filter=~Q(services__is_active=False)))
 
     page = request.GET.get('page', 1)
     masters_page = get_paginated_page(masters_queryset, page, 3)
@@ -75,27 +75,28 @@ def update_appointment_status_view(request, appointment_id):
         if not appointment.is_past:
             messages.error(request, 'Статус будущей записи менять запрещено.')
         else:
-            messages.error(request, 'Возможно запись уже отменена, невозможно поменять статус.')
+            messages.error(request, 'Запись нельзя изменить.')
+        return redirect(to_appointments_url)
 
     new_status = request.POST.get('status')
-    if new_status not in [StatusChoices.BOOKED, StatusChoices.COMPLETED, StatusChoices.NO_SHOW]:
-        messages.error(request, 'Неверный статус.')
+    if new_status not in appointment.allowed_status_transitions:
+        messages.error(request, f"Нельзя изменить статус на {new_status}.")
         return redirect(to_appointments_url)
 
     appointment.status = new_status
     try:
         appointment.save()
     except IntegrityError:
-        messages.error(request, 'Не удалось обновить статус записи. Попробуйте ещё раз.')
+        messages.error(request, f"Не удалось обновить статус записи #{appointment.id}. Попробуйте ещё раз."  )
         return redirect(to_appointments_url)
     except DatabaseError:
         messages.error(request, 'Ошибка базы данных. Попробуйте позже.')
         return redirect(to_appointments_url)
 
     if appointment.is_completed:
-        messages.success(request, 'Запись отмечена как завершённая.')
+        messages.success(request, f"Запись #{appointment.id} отмечена как завершённая.")
     elif appointment.is_no_show:
-        messages.warning(request, 'Запись отмечена как неявка.')
+        messages.warning(request, f"Запись {appointment.id} отмечена как неявка.")
 
     return redirect(to_appointments_url)
 
@@ -106,7 +107,7 @@ def appointment_list_view(request):
     master_id = request.GET.get('master')
     status = request.GET.get('status')
 
-    valid_stutus = [s[0] for s in StatusChoices.choices]
+    valid_stutuses = [s[0] for s in StatusChoices.choices]
 
     now = timezone.localtime()
 
@@ -124,7 +125,7 @@ def appointment_list_view(request):
     if master_id and master_id.isdigit():
         appointments_queryset = appointments_queryset.filter(master_id=master_id)
 
-    if status in valid_stutus:
+    if status in valid_stutuses:
         appointments_queryset = appointments_queryset.filter(status=status)
     else:
         status = ''
@@ -169,7 +170,6 @@ def cancel_appointment_view(request, appointment_id):
         reason = request.POST.get('reason', '').strip() or 'Отменено администратором'
         appointment.status = StatusChoices.CANCELLED
         appointment.cancel_reason = reason[:500]
-        appointment.cancelled_at = timezone.now()
         try:
             appointment.save()
         except IntegrityError:
@@ -188,8 +188,9 @@ def cancel_appointment_view(request, appointment_id):
 
         return redirect(to_appointments_url)
 
-    context = {
-        'appointment': appointment,
-        'to_appointments_url': to_appointments_url
-    }
-    return render(request, 'appointments/cancel_confirm.html', context)
+    else:
+        context = {
+            'appointment': appointment,
+            'to_appointments_url': to_appointments_url
+        }
+        return render(request, 'appointments/cancel_confirm.html', context)

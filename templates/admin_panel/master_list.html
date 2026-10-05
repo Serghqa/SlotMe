@@ -14,21 +14,32 @@
                     <th>Мастер</th>
                     <th class="text-nowrap">Электронная почта</th>
                     <th>Телефон</th>
-                    <th class="service-col">Услуги</th>
+                    <th class="col-actions">Действия</th>
                 </tr>
             </thead>
             <tbody>
                 {% for master in masters %}
                     <tr>
-                        <td>
-                            <a href="#" class="btn btn-sm btn-outline-secondary">{{ master.user.display_name }}</a>
-                        </td>
+                        <td>{{ master.user.display_name }}</td>
                         <td class="text-nowrap">{{ master.user.email }}</td>
-                        <td class="text-nowrap">{{ master.user.phone.as_national|default:"—" }}</td>
+                        <td class="text-nowrap">{{ master.user.phone.as_national }}</td>
                         <td>
-                            <a href="{% url 'admin_panel:master_services' master.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-primary">
-                                Посмотреть услуги ({{ master.services_count }})
-                            </a>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                        aria-label="Действия">
+                                    Действия
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a href="{% url 'admin_panel:master_services' master.id %}?next={{ request.get_full_path|urlencode }}" class="dropdown-item text-primary">
+                                            Услуги ({{ master.services_count }})
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}

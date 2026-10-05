@@ -71,7 +71,7 @@ class Appointment(AppointmentValidationMixin, models.Model):
 
     def set_end_datetime(self):
         """Автоматически устанавливает end_datetime на основе start_datetime и длительности услуги."""
-        if self.service_id and self.start_datetime:
+        if self.is_booked and self.service_id and self.start_datetime:
             self.end_datetime = self.start_datetime + self.service.duration
 
     @property

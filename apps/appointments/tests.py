@@ -523,13 +523,15 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_cancelled_appointment_not_blocking(self):
         """Отмененная запись не блокирует время"""
-        Appointment.objects.create(
+        appointment_cancelled = Appointment.objects.create(
             client=self.client_user,
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status=StatusChoices.CANCELLED
+            status=StatusChoices.BOOKED
         )
+        appointment_cancelled.status = StatusChoices.CANCELLED
+        appointment_cancelled.save()
 
         appointment = Appointment(
             client=self.client_user,
@@ -638,8 +640,10 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=past_time,
-            status=StatusChoices.COMPLETED
+            status=StatusChoices.BOOKED
         )
+        appointment.status = StatusChoices.COMPLETED
+        appointment.save()
 
         appointment.status = StatusChoices.BOOKED
         with self.assertRaises(ValidationError):
@@ -665,8 +669,10 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=past_time,
-            status=StatusChoices.NO_SHOW
+            status=StatusChoices.BOOKED
         )
+        appointment.status = StatusChoices.NO_SHOW
+        appointment.save()
 
         appointment.status = StatusChoices.BOOKED
         with self.assertRaises(ValidationError):
@@ -689,8 +695,11 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status=StatusChoices.CANCELLED
+            status=StatusChoices.BOOKED
         )
+        appointment.status = StatusChoices.CANCELLED
+        appointment.cancel_reason = 'Передумал'
+        appointment.save()
 
         appointment.status = StatusChoices.BOOKED
         with self.assertRaises(ValidationError):
@@ -792,13 +801,16 @@ class AppointmentBookingTestCase(TestCase):
 
     def test_cancelled_no_unique_constraint(self):
         """Отмененная запись не мешает UniqueConstraint"""
-        Appointment.objects.create(
+        appointment = Appointment.objects.create(
             client=self.client_user,
             master=self.master,
             service=self.service,
             start_datetime=self.booking_time,
-            status=StatusChoices.CANCELLED
+            status=StatusChoices.BOOKED
         )
+        appointment.status = StatusChoices.CANCELLED
+        appointment.cancel_reason = 'Передумал'
+        appointment.save()
 
         # Можно создать активную на то же время
         try:
@@ -995,8 +1007,11 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=timezone.now(),
-            status=StatusChoices.CANCELLED
+            status=StatusChoices.BOOKED
         )
+        appointment.status = StatusChoices.CANCELLED
+        appointment.cancel_reason = 'Передумал'
+        appointment.save()
 
         # Конвертируем в Europe/Moscow
         moscow_tz = ZoneInfo('Europe/Moscow')
@@ -1023,8 +1038,11 @@ class AppointmentBookingTestCase(TestCase):
             master=self.master,
             service=self.service,
             start_datetime=timezone.now(),
-            status=StatusChoices.CANCELLED
+            status=StatusChoices.BOOKED
         )
+        appointment.status = StatusChoices.CANCELLED
+        appointment.cancel_reason = 'Передумал'
+        appointment.save()
         first_cancelled = appointment.cancelled_at
 
         # Ждем немного
